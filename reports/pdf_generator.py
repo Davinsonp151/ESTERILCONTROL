@@ -1,187 +1,99 @@
 import os
+from docx import Document
 from io import BytesIO
-from reportlab.lib.pagesizes import letter
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib import colors
 
-def generar_pdf_informe(c, logo_path="assets/logo_esterilcontrol.jpg"):
-    buffer = BytesIO()
-    doc = SimpleDocTemplate(
-        buffer, 
-        pagesize=letter, 
-        rightMargin=25, 
-        leftMargin=25, 
-        topMargin=25, 
-        bottomMargin=25
-    )
-    elementos = []
-    styles = getSampleStyleSheet()
+def generar_pdf_informe(datos):
+    """
+    Genera un documento Word basado en plantilla utilizando python-docx,
+    reemplazando etiquetas dinámicas, aplicando fuente Calibri y quitando negritas a los datos.
+    """
+    plantilla_path = "reports/plantilla_base.docx"
     
-    estilo_titulo_hdr = ParagraphStyle('HdrTitle', parent=styles['Heading1'], fontSize=10, leading=12, alignment=1, fontName='Helvetica-Bold')
-    estilo_meta_hdr = ParagraphStyle('HdrMeta', parent=styles['Normal'], fontSize=8, leading=10, fontName='Helvetica-Bold')
-    estilo_cell_bold = ParagraphStyle('CellBold', parent=styles['Normal'], fontSize=8, leading=10, fontName='Helvetica-Bold')
-    estilo_cell_norm = ParagraphStyle('CellNorm', parent=styles['Normal'], fontSize=8, leading=10, fontName='Helvetica')
+    if not os.path.exists(plantilla_path):
+        plantilla_path = "plantilla_base.docx"
+        
+    doc = Document(plantilla_path)
 
-    cod_ciclo_fmt = f"{int(c['n_ciclo']):05d}"
+    # 1. Diccionario completo con todas las etiquetas de la plantilla oficial CIR-FT-01
+    reemplazos = {
+        "{{fecha}}": str(datos.get("fecha_inicio", "")),
+        "{{hora_inicio}}": str(datos.get("hora_inicio", "")),
+        "{{hora_fin}}": str(datos.get("hora_fin", "En Proceso")),
+        "{{metodo}}": str(datos.get("metodo", "Óxido de Etileno")),
+        "{{control_carga}}": str(datos.get("control_carga", "Conforme")),
+        "{{esterilizador}}": str(datos.get("esterilizador", "")),
+        "{{n_cic}}": str(datos.get("n_cic", "")),
+        "{{tipo_carga}}": str(datos.get("tipo_carga", "Textil")),
+        "{{presion}}": str(datos.get("presion", "")),
+        "{{tiempo_exposicion}}": str(datos.get("tiempo_exposicion", "")),
+        "{{temperatura}}": str(datos.get("temperatura", "")),
+        "{{operador}}": str(datos.get("operador", "")),
+        "{{estado}}": str(datos.get("estado", ""))
+    }
 
-    # 1. Encabezado Oficial CIR-FT-01
-    img_logo = None
-    if os.path.exists(logo_path):
-        img_logo = Image(logo_path, width=110, height=35)
-    else:
-        img_logo = Paragraph("<b>AM Medical</b>", estilo_cell_bold)
+    # Función auxiliar para unificar fragmentos XML, reemplazar etiquetas, asignar Calibri y quitar negrita
+    def procesar_parrafo(p):
+        texto_completo = "".join([run.text for run in p.runs])
+        modificado = False
+        for clave, valor in reemplazos.items():
+            if clave in texto_completo:
+                texto_completo = texto_completo.replace(clave, str(valor))
+                modificado = True
+        
+        if modificado and p.runs:
+            p.runs[0].text = texto_completo
+            p.runs[0].font.name = 'Calibri'
+            p.runs[0].font.bold = False  # Forzar a que NO sea negrita
+            for run in p.runs[1:]:
+                run.text = ""
+        else:
+            # Asegurar que el resto del texto también mantenga la fuente Calibri si se desea
+            for run in p.runs:
+                run.font.name = 'Calibri'
 
-    p_titulo = Paragraph("FORMATO PARA EL CONTROL DEL PROCESO DE ESTERILIZACION", estilo_titulo_hdr)
-    p_meta = Paragraph("<b>CODIGO:</b> CIR-FT-01<br/><b>VERSION:</b> 01<br/><b>VIGENCIA:</b> 24/06/2028<br/><b>PAGINA:</b> 01", estilo_meta_hdr)
+    # Recorremos los párrafos del documento principal[cite: 5]
+    for p in doc.paragraphs:
+        procesar_parrafo(p)
 
-    data_hdr = [[img_logo, p_titulo, p_meta]]
-    t_hdr = Table(data_hdr, colWidths=[130, 290, 140])
-    t_hdr.setStyle(TableStyle([
-        ('ALIGN', (0,0), (-1,-1), 'CENTER'),
-        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
-        ('GRID', (0,0), (-1,-1), 1, colors.black),
-        ('TOPPADDING', (0,0), (-1,-1), 4),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 4),
-    ]))
-    elementos.append(t_hdr)
-    elementos.append(Spacer(1, 4))
+    # Recorremos las tablas para asegurar el reemplazo y estilo en celdas[cite: 5]
+    for tabla in doc.tables:
+        for fila in tabla.rows:
+            for celda in fila.cells:
+                for p in celda.paragraphs:
+                    procesar_parrafo(p)
 
-    # 2. Parámetros Generales
-    is_eo = "EO" if "EO" in c['equipo'].upper() or "OXIDO" in str(c.get('metodo','')).upper() else "X"
-    is_vap = "" if is_eo == "EO" else "X"
+    # 2. Inyección de ítems en la tabla correspondiente[cite: 5]
+    items = datos.get("items", [])
+    
+    if items and len(doc.tables) > 0:
+        tabla_items = None
+        for tabla in doc.tables:
+            if len(tabla.rows) > 1:
+                tabla_items = tabla
+                break
+        
+        if tabla_items and len(tabla_items.rows) >= 2:
+            for idx, item in enumerate(items):
+                if idx + 1 < len(tabla_items.rows):
+                    row = tabla_items.rows[idx + 1]
+                else:
+                    row = tabla_items.add_row()
+                
+                try:
+                    row.cells[0].text = str(item.get("nombre", ""))
+                    row.cells[1].text = str(item.get("cantidad", 0))
+                    row.cells[2].text = str(item.get("lote", ""))
+                    
+                    # Asegurar fuente Calibri y texto normal en la tabla de ítems
+                    for cell in row.cells:
+                        for p in cell.paragraphs:
+                            for run in p.runs:
+                                run.font.name = 'Calibri'
+                                run.font.bold = False
+                except Exception:
+                    pass
 
-    data_params = [
-        [
-            Paragraph(f"<b>METODO DE ESTERILIZACIÓN :</b> VAPOR: [ {is_vap} ]  OXIDO DE ETILENO: [ {is_eo} ]", estilo_cell_norm),
-            Paragraph(f"<b>N° ESTERILIZADOR:</b> {c['equipo']}", estilo_cell_norm)
-        ],
-        [
-            Paragraph(f"<b>N° CICLO:</b> {cod_ciclo_fmt}", estilo_cell_bold),
-            Paragraph(f"<b>FECHA:</b> {c['fecha']}", estilo_cell_norm)
-        ],
-        [
-            Paragraph(f"<b>HORA DE INICIO:</b> {c['hora_inicio']}", estilo_cell_norm),
-            Paragraph(f"<b>HORA DE FINALIZACIÓN:</b> {c['hora_fin'] if c['hora_fin'] else 'En Proceso'}", estilo_cell_norm)
-        ],
-        [
-            Paragraph(f"<b>TEMPERATURA:</b> {c['temp']} °C", estilo_cell_norm),
-            Paragraph(f"<b>PRESIÓN DE CÁMARA:</b> {c.get('presion_camara', '-49kPa')}", estilo_cell_norm)
-        ],
-        [
-            Paragraph(f"<b>TIEMPO EXPOSICIÓN:</b> {c['t_exp']} Min / 2H", estilo_cell_norm),
-            Paragraph(f"<b>TIPO DE CARGA:</b> {c['observaciones'] if c['observaciones'] else 'Textil / Médico'}", estilo_cell_norm)
-        ],
-        [
-            Paragraph(f"<b>NOMBRE RESPONSABLE DE ESTERILIZACIÓN:</b> {c['operador']}", estilo_cell_norm),
-            Paragraph(f"<b>RESULTADO PROCESO:</b> {c['resultado']}", estilo_cell_norm)
-        ]
-    ]
-
-    t_params = Table(data_params, colWidths=[280, 280])
-    t_params.setStyle(TableStyle([
-        ('GRID', (0,0), (-1,-1), 0.8, colors.black),
-        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
-        ('TOPPADDING', (0,0), (-1,-1), 3),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 3),
-        ('LEFTPADDING', (0,0), (-1,-1), 5),
-    ]))
-    elementos.append(t_params)
-    elementos.append(Spacer(1, 4))
-
-    # 3. Descripción de Carga
-    data_carga_pdf = [
-        [Paragraph("<b>DESCRIPCIÓN DE CARGA</b>", estilo_cell_bold), Paragraph("<b>CANT.</b>", estilo_cell_bold), Paragraph("<b>LOTE</b>", estilo_cell_bold)]
-    ]
-
-    items_carga = [
-        ("PAQUETE LAPARATOMIA", c.get('q_lap', 0), c.get('l_lap', '0')),
-        ("U. HEMODINAMIA", c.get('q_hemo', 0), c.get('l_hemo', '0')),
-        ("CIRUGÍA VALLEDUPAR", c.get('q_cir', 0), c.get('l_cir', '0')),
-        ("SÁBANAS ESTÉRILES", c.get('q_sab', 0), c.get('l_sab', '0')),
-        ("PAQUETE CENTRAL ADULTO", c.get('q_adult', 0), c.get('l_adult', '0')),
-        ("NEUROINTERVENCIONISMO", c.get('q_neuro', 0), c.get('l_neuro', '0')),
-        ("APÓSITOS ESTÉRILES", c.get('q_apos', 0), c.get('l_apos', '0')),
-    ]
-
-    alguno_agregado = False
-    for nombre_i, cant_i, lote_i in items_carga:
-        if cant_i > 0:
-            data_carga_pdf.append([
-                Paragraph(nombre_i, estilo_cell_norm),
-                Paragraph(f"{cant_i} U", estilo_cell_norm),
-                Paragraph(str(lote_i), estilo_cell_norm)
-            ])
-            alguno_agregado = True
-
-    if not alguno_agregado:
-        data_carga_pdf.append([
-            Paragraph("CARGA GENERAL / MATERIAL VARIO", estilo_cell_norm),
-            Paragraph(f"{c['tot_unidades']} U", estilo_cell_norm),
-            Paragraph("LT080327", estilo_cell_norm)
-        ])
-
-    data_carga_pdf.append([
-        Paragraph(f"<b>TOTALES: {c['tot_peso']} kg ({c['ocupacion']}% Ocupación)</b>", estilo_cell_bold),
-        Paragraph(f"<b>{c['tot_unidades']} U</b>", estilo_cell_bold),
-        Paragraph(f"<b>Canastas: {c['canastas_grandes']}G / {c['canastas_pequenas']}P</b>", estilo_cell_bold)
-    ])
-
-    t_carga = Table(data_carga_pdf, colWidths=[300, 100, 160])
-    t_carga.setStyle(TableStyle([
-        ('BACKGROUND', (0,0), (-1,0), colors.HexColor("#f0f0f0")),
-        ('GRID', (0,0), (-1,-1), 0.8, colors.black),
-        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
-        ('TOPPADDING', (0,0), (-1,-1), 3),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 3),
-        ('LEFTPADDING', (0,0), (-1,-1), 5),
-    ]))
-    elementos.append(t_carga)
-    elementos.append(Spacer(1, 4))
-
-    # 4. Controles Biológicos y Químicos
-    res_pos = "X" if str(c.get('res_ib','')).upper() == "POSITIVO" else " "
-    res_neg = "X" if str(c.get('res_ib','')).upper() == "NEGATIVO" or c.get('res_ib','') == "Conforme" else "X"
-
-    data_bio = [
-        [
-            Paragraph("<b>STIKER INDICADOR BIOLOGICO</b><br/><br/><br/><br/><i>(Pegar sticker de lectura aquí)</i>", estilo_cell_norm),
-            Paragraph(f"""
-                <b>CONTROL DE CARGA</b><br/><br/>
-                <b>RESULTADO DE LECTURA:</b><br/>
-                POSITIVO: [ {res_pos} ]   NEGATIVO: [ {res_neg} ]<br/><br/>
-                <b>NOMBRE RESPONSABLE DE LECTURA INDICADOR:</b><br/>
-                {c['operador']}
-            """, estilo_cell_norm)
-        ]
-    ]
-
-    t_bio = Table(data_bio, colWidths=[280, 280])
-    t_bio.setStyle(TableStyle([
-        ('GRID', (0,0), (-1,-1), 0.8, colors.black),
-        ('VALIGN', (0,0), (-1,-1), 'TOP'),
-        ('TOPPADDING', (0,0), (-1,-1), 5),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 5),
-        ('LEFTPADDING', (0,0), (-1,-1), 5),
-    ]))
-    elementos.append(t_bio)
-    elementos.append(Spacer(1, 4))
-
-    data_tirillas = [
-        [
-            Paragraph("<b>TIRILLA INDICADORA INTERNA / CONTROL DE EXPOSICIÓN / INDICADOR QUÍMICO EXTERNO</b><br/><br/><br/><br/><br/><i>(Espacio reservado para fijación de tirilla física de control)</i>", estilo_cell_norm)
-        ]
-    ]
-    t_tirillas = Table(data_tirillas, colWidths=[560])
-    t_tirillas.setStyle(TableStyle([
-        ('GRID', (0,0), (-1,-1), 0.8, colors.black),
-        ('VALIGN', (0,0), (-1,-1), 'TOP'),
-        ('TOPPADDING', (0,0), (-1,-1), 5),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 5),
-        ('LEFTPADDING', (0,0), (-1,-1), 5),
-    ]))
-    elementos.append(t_tirillas)
-
-    doc.build(elementos)
+    buffer = BytesIO()
+    doc.save(buffer)
     buffer.seek(0)
     return buffer

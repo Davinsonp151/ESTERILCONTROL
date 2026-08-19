@@ -8,5 +8,35 @@
         "responsable": "Administrador",
         "observaciones": "Conforme",
         "fecha_registro": "2026-08-16"
+    },
+    {
+        "ciclo": 155,
+        "tipo": "BT10 EO ATCC 9372",
+        "lote": "A50300",
+        "resultado": "Negativo",
+        "fecha_incubacion": "2026-08-18",
+        "responsable": "Administrador",
+        "observaciones": "Conforme",
+        "fecha_registro": "2026-08-18"
+    },
+    {
+        "ciclo": 155,
+        "tipo": "BT10 EO ATCC 9372",
+        "lote": "A50300",
+        "resultado": "Negativo",
+        "fecha_incubacion": "2026-08-18",
+        "responsable": "Administrador",
+        "observaciones": "Conforme",
+        "fecha_registro": "2026-08-18"
+    },
+    {
+        "ciclo": 3,
+        "tipo": "BT10 EO ATCC 9372",
+        "lote": "A50300",
+        "resultado": "Negativo",
+        "fecha_incubacion": "2026-08-18",
+        "responsable": "Administrador",
+        "observaciones": "Conforme",
+        "fecha_registro": "2026-08-18"
     }
 ]

@@ -5,11 +5,8 @@ import json
 from datetime import datetime, timedelta
 from io import BytesIO
 
-# Importaciones de ReportLab para el Formato Oficial CIR-FT-01
-from reportlab.lib.pagesizes import letter
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib import colors
+# --- IMPORTACIÓN DEL NUEVO GENERADOR EXTERNO ---
+from reports.pdf_generator import generar_pdf_informe
 
 # --- CONFIGURACIÓN DE PÁGINA ---
 st.set_page_config(
@@ -105,184 +102,6 @@ def mostrar_logo(width=180):
         st.image("logo_esterilcontrol.jpg", width=width)
     else:
         st.title("🌀 EsterilControl")
-
-
-# =========================================================================
-# GENERADOR DE PDF OFICIAL (CIR-FT-01) - 100% FIEL A LA PLANTILLA
-# =========================================================================
-def generar_pdf_informe(c):
-    buffer = BytesIO()
-    doc = SimpleDocTemplate(
-        buffer, 
-        pagesize=letter, 
-        rightMargin=20, 
-        leftMargin=20, 
-        topMargin=20, 
-        bottomMargin=20
-    )
-    elementos = []
-    styles = getSampleStyleSheet()
-    
-    estilo_titulo_hdr = ParagraphStyle('HdrTitle', parent=styles['Heading1'], fontSize=9, leading=11, alignment=1, fontName='Helvetica-Bold')
-    estilo_meta_hdr = ParagraphStyle('HdrMeta', parent=styles['Normal'], fontSize=7, leading=9, fontName='Helvetica-Bold')
-    estilo_cell_bold = ParagraphStyle('CellBold', parent=styles['Normal'], fontSize=7.5, leading=9.5, fontName='Helvetica-Bold')
-    estilo_cell_norm = ParagraphStyle('CellNorm', parent=styles['Normal'], fontSize=7.5, leading=9.5, fontName='Helvetica')
-
-    cod_ciclo_fmt = f"{int(c['n_ciclo']):05d}"
-
-    # 1. Encabezado Oficial CIR-FT-01
-    img_logo = None
-    if os.path.exists(LOGO_PATH):
-        img_logo = Image(LOGO_PATH, width=95, height=35)
-    elif os.path.exists("logo_esterilcontrol.jpg"):
-        img_logo = Image("logo_esterilcontrol.jpg", width=95, height=35)
-    else:
-        img_logo = Paragraph("<b>AM Medical</b>", estilo_cell_bold)
-
-    p_titulo = Paragraph("FORMATO PARA EL CONTROL DEL PROCESO DE ESTERILIZACION", estilo_titulo_hdr)
-    p_meta = Paragraph("<b>CODIGO:</b> CIR-FT-01<br/><b>VERSION:</b> 01<br/><b>VIGENCIA:</b> 24/06/2028<br/><b>PAGINA:</b> 01", estilo_meta_hdr)
-
-    data_hdr = [[img_logo, p_titulo, p_meta]]
-    t_hdr = Table(data_hdr, colWidths=[110, 310, 152])
-    t_hdr.setStyle(TableStyle([
-        ('ALIGN', (0,0), (-1,-1), 'CENTER'),
-        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
-        ('GRID', (0,0), (-1,-1), 1, colors.black),
-        ('TOPPADDING', (0,0), (-1,-1), 3),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 3),
-    ]))
-    elementos.append(t_hdr)
-    elementos.append(Spacer(1, 3))
-
-    # 2. Bloque de Datos y Parámetros
-    is_eo = "X" if "EO" in c['equipo'].upper() or "OXIDO" in str(c.get('metodo','')).upper() else ""
-    is_vap = "" if is_eo == "X" else "X"
-
-    data_params = [
-        [
-            Paragraph(f"<b>METODO DE ESTERILIZACIÓN:</b> VAPOR: [ {is_vap} ]  OXIDO DE ETILENO: [ {is_eo} ]", estilo_cell_norm),
-            Paragraph(f"<b>N° ESTERILIZADOR:</b> {c['equipo']}", estilo_cell_norm)
-        ],
-        [
-            Paragraph(f"<b>N° CICLO:</b> {cod_ciclo_fmt}", estilo_cell_bold),
-            Paragraph(f"<b>FECHA:</b> {c['fecha']}", estilo_cell_norm)
-        ],
-        [
-            Paragraph(f"<b>HORA DE INICIO:</b> {c['hora_inicio']}", estilo_cell_norm),
-            Paragraph(f"<b>HORA DE FINALIZACIÓN:</b> {c['hora_fin'] if c['hora_fin'] else 'En Proceso'}", estilo_cell_norm)
-        ],
-        [
-            Paragraph(f"<b>CONTROL FISICO - TEMPERATURA:</b> {c['temp']} °C", estilo_cell_norm),
-            Paragraph(f"<b>PRESION DE CAMARA:</b> {c.get('presion_camara', '-49kPa')}", estilo_cell_norm)
-        ],
-        [
-            Paragraph(f"<b>TIEMPO EXPOSICIÓN:</b> {c['t_exp']} Min", estilo_cell_norm),
-            Paragraph(f"<b>TIPO DE CARGA:</b> {c['observaciones'] if c['observaciones'] else 'Textil'}", estilo_cell_norm)
-        ],
-        [
-            Paragraph(f"<b>NOMBRE RESPONSABLE DE ESTERILIZACIÓN:</b> {c['operador']}", estilo_cell_norm),
-            Paragraph(f"<b>RESULTADO PROCESO:</b> {c['resultado']}", estilo_cell_norm)
-        ]
-    ]
-
-    t_params = Table(data_params, colWidths=[286, 286])
-    t_params.setStyle(TableStyle([
-        ('GRID', (0,0), (-1,-1), 0.7, colors.black),
-        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
-        ('TOPPADDING', (0,0), (-1,-1), 2.5),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 2.5),
-        ('LEFTPADDING', (0,0), (-1,-1), 4),
-    ]))
-    elementos.append(t_params)
-    elementos.append(Spacer(1, 3))
-
-    # 3. Sección DESCRIPCIÓN DE CARGA
-    data_carga_pdf = [
-        [Paragraph("<b>DESCRIPCIÓN DE CARGA</b>", estilo_cell_bold), Paragraph("<b>CANT.</b>", estilo_cell_bold), Paragraph("<b>LOTE</b>", estilo_cell_bold)]
-    ]
-
-    items_carga = [
-        ("PAQUETE LAPARATOMIA", c.get('q_lap', 0), c.get('l_lap', '0')),
-        ("U. HEMODINAMIA", c.get('q_hemo', 0), c.get('l_hemo', '0')),
-        ("CIRUGÍA VALLEDUPAR", c.get('q_cir', 0), c.get('l_cir', '0')),
-        ("SÁBANAS ESTÉRILES", c.get('q_sab', 0), c.get('l_sab', '0')),
-        ("PAQUETE CENTRAL ADULTO", c.get('q_adult', 0), c.get('l_adult', '0')),
-        ("NEUROINTERVENCIONISMO", c.get('q_neuro', 0), c.get('l_neuro', '0')),
-        ("APÓSITOS ESTÉRILES", c.get('q_apos', 0), c.get('l_apos', '0')),
-    ]
-
-    for nombre_i, cant_i, lote_i in items_carga:
-        if cant_i > 0:
-            data_carga_pdf.append([
-                Paragraph(nombre_i, estilo_cell_norm),
-                Paragraph(f"{cant_i} U", estilo_cell_norm),
-                Paragraph(str(lote_i), estilo_cell_norm)
-            ])
-
-    data_carga_pdf.append([
-        Paragraph(f"<b>TOTALES: {c['tot_peso']} kg ({c['ocupacion']}% Ocupación)</b>", estilo_cell_bold),
-        Paragraph(f"<b>{c['tot_unidades']} U</b>", estilo_cell_bold),
-        Paragraph(f"<b>Canastas: {c['canastas_grandes']}G / {c['canastas_pequenas']}P</b>", estilo_cell_bold)
-    ])
-
-    t_carga = Table(data_carga_pdf, colWidths=[292, 100, 180])
-    t_carga.setStyle(TableStyle([
-        ('BACKGROUND', (0,0), (-1,0), colors.HexColor("#f0f0f0")),
-        ('GRID', (0,0), (-1,-1), 0.7, colors.black),
-        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
-        ('TOPPADDING', (0,0), (-1,-1), 2.5),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 2.5),
-        ('LEFTPADDING', (0,0), (-1,-1), 4),
-    ]))
-    elementos.append(t_carga)
-    elementos.append(Spacer(1, 3))
-
-    # 4. Sección de Controles Biológicos y de Carga
-    res_pos = "X" if str(c.get('res_ib','')).upper() == "POSITIVO" else " "
-    res_neg = "X" if str(c.get('res_ib','')).upper() == "NEGATIVO" or c.get('res_ib','') == "Conforme" else "X"
-
-    data_bio = [
-        [
-            Paragraph("<b>STIKER INDICADOR BIOLOGICO</b><br/><br/><br/><i>(Pegar sticker de lectura aquí)</i>", estilo_cell_norm),
-            Paragraph(f"""
-                <b>CONTROL DE CARGA</b><br/><br/>
-                <b>RESULTADO DE LECTURA:</b><br/>
-                POSITIVO: [ {res_pos} ]   NEGATIVO: [ {res_neg} ]<br/><br/>
-                <b>NOMBRE RESPONSABLE DE LECTURA INDICADOR:</b><br/>
-                {c['operador']}
-            """, estilo_cell_norm)
-        ]
-    ]
-
-    t_bio = Table(data_bio, colWidths=[286, 286])
-    t_bio.setStyle(TableStyle([
-        ('GRID', (0,0), (-1,-1), 0.7, colors.black),
-        ('VALIGN', (0,0), (-1,-1), 'TOP'),
-        ('TOPPADDING', (0,0), (-1,-1), 4),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 4),
-        ('LEFTPADDING', (0,0), (-1,-1), 4),
-    ]))
-    elementos.append(t_bio)
-    elementos.append(Spacer(1, 3))
-
-    data_tirillas = [
-        [
-            Paragraph("<b>TIRILLA INDICADORA INTERNA / CONTROL DE EXPOSICIÓN / INDICADOR QUIMICO EXTERNO</b><br/><br/><br/><br/><i>(Espacio reservado para fijación de tirilla física de control)</i>", estilo_cell_norm)
-        ]
-    ]
-    t_tirillas = Table(data_tirillas, colWidths=[572])
-    t_tirillas.setStyle(TableStyle([
-        ('GRID', (0,0), (-1,-1), 0.7, colors.black),
-        ('VALIGN', (0,0), (-1,-1), 'TOP'),
-        ('TOPPADDING', (0,0), (-1,-1), 4),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 4),
-        ('LEFTPADDING', (0,0), (-1,-1), 4),
-    ]))
-    elementos.append(t_tirillas)
-
-    doc.build(elementos)
-    buffer.seek(0)
-    return buffer
 
 
 # ==========================================
@@ -669,128 +488,46 @@ else:
             c_sel = next((x for x in st.session_state.ciclos_db if int(x['n_ciclo']) == n_ciclo_sel), None)
 
             if c_sel:
-                cod_ciclo_fmt = f"{int(c_sel['n_ciclo']):05d}"
-                nombre_oficial_doc = f"EL CONTROL DEL PROCESO DE ESTERILIZACIÓN - {cod_ciclo_fmt}"
+                # ADAPTADOR DE DATOS PARA EL PDF OFICIAL (Con la llave "lote" corregida)
+                datos_para_pdf = {
+                    "metodo": "Óxido de Etileno",
+                    "equipo": c_sel.get('equipo', 'HDX-6 EO'),
+                    "esterilizador": c_sel.get('equipo', 'HDX-6 EO'),
+                    "n_cic": f"{int(c_sel['n_ciclo']):05d}",
+                    "fecha_inicio": c_sel.get('fecha', ''),
+                    "hora_inicio": c_sel.get('hora_inicio', ''),
+                    "hora_fin": c_sel.get('hora_fin', 'En Proceso'),
+                    "temperatura": f"{c_sel.get('temp', 30.9)} °C",
+                    "presion": c_sel.get('presion_camara', '-49kPa'),
+                    "tiempo_exposicion": f"{c_sel.get('t_exp', 120)} Min",
+                    "tipo_carga": c_sel.get('observaciones', 'Textil'),
+                    "control_carga": c_sel.get('estado_cumplimiento', 'CUMPLE'),
+                    "operador": c_sel.get('operador', 'Administrador'),
+                    "estado": c_sel.get('resultado', 'Aprobado'),
+                    "items": [
+                        {"nombre": "Paquete Laparotomía", "cantidad": c_sel.get('q_lap', 0), "lote": c_sel.get('l_lap', '0')},
+                        {"nombre": "Unidad Hemodinamia", "cantidad": c_sel.get('q_hemo', 0), "lote": c_sel.get('l_hemo', '0')},
+                        {"nombre": "Cirugía Valledupar", "cantidad": c_sel.get('q_cir', 0), "lote": c_sel.get('l_cir', '0')},
+                        {"nombre": "Sábanas Estériles", "cantidad": c_sel.get('q_sab', 0), "lote": c_sel.get('l_sab', '0')},
+                        {"nombre": "Paquete Central Adulto", "cantidad": c_sel.get('q_adult', 0), "lote": c_sel.get('l_adult', '0')},
+                        {"nombre": "Neurointervencionismo", "cantidad": c_sel.get('q_neuro', 0), "lote": c_sel.get('l_neuro', '0')},
+                        {"nombre": "Apósitos Estériles", "cantidad": c_sel.get('q_apos', 0), "lote": c_sel.get('l_apos', '0')},
+                    ]
+                }
 
-                st.markdown(f"### 👁️ Previsualización Exacta Plantilla Oficial CIR-FT-01")
-                
-                is_eo_prev = "X" if "EO" in c_sel['equipo'].upper() or "OXIDO" in str(c_sel.get('metodo','')).upper() else ""
-                is_vap_prev = "" if is_eo_prev == "X" else "X"
-                res_pos_prev = "X" if str(c_sel.get('res_ib','')).upper() == "POSITIVO" else " "
-                res_neg_prev = "X" if str(c_sel.get('res_ib','')).upper() == "NEGATIVO" or c_sel.get('res_ib','') == "Conforme" else "X"
-
-                items_html_inf = ""
-                items_verif_inf = [
-                    ("PAQUETE LAPARATOMIA", c_sel.get('q_lap', 0), c_sel.get('l_lap', '0')),
-                    ("U. HEMODINAMIA", c_sel.get('q_hemo', 0), c_sel.get('l_hemo', '0')),
-                    ("CIRUGÍA VALLEDUPAR", c_sel.get('q_cir', 0), c_sel.get('l_cir', '0')),
-                    ("SÁBANAS ESTÉRILES", c_sel.get('q_sab', 0), c_sel.get('l_sab', '0')),
-                    ("PAQUETE CENTRAL ADULTO", c_sel.get('q_adult', 0), c_sel.get('l_adult', '0')),
-                    ("NEUROINTERVENCIONISMO", c_sel.get('q_neuro', 0), c_sel.get('l_neuro', '0')),
-                    ("APÓSITOS ESTÉRILES", c_sel.get('q_apos', 0), c_sel.get('l_apos', '0')),
+                # Filtramos solo los ítems que tengan cantidad mayor a 0
+                datos_para_pdf["items"] = [
+                    item for item in datos_para_pdf["items"] if item["cantidad"] > 0
                 ]
-                for it_nombre, it_cant, it_lote in items_verif_inf:
-                    if it_cant > 0:
-                        items_html_inf += f"""
-                        <tr>
-                            <td style="border: 1px solid black; padding: 4px;">{it_nombre}</td>
-                            <td style="border: 1px solid black; padding: 4px; text-align: center;">{it_cant} U</td>
-                            <td style="border: 1px solid black; padding: 4px; text-align: center;">{it_lote}</td>
-                        </tr>
-                        """
-
-                # HTML limpio renderizado de forma idéntica a la plantilla oficial
-                st.markdown(f"""
-                <div style="background-color: white; color: black; padding: 15px; border-radius: 6px; border: 1.5px solid #000; font-family: Helvetica, Arial, sans-serif; font-size: 11px;">
-                    <table style="width:100%; border: 1px solid black; border-collapse: collapse; text-align: center;">
-                        <tr>
-                            <td style="width:20%; border: 1px solid black; padding: 6px;"><b>AM Medical</b></td>
-                            <td style="width:55%; border: 1px solid black; padding: 6px; font-weight: bold; font-size: 11px;">FORMATO PARA EL CONTROL DEL PROCESO DE ESTERILIZACION</td>
-                            <td style="width:25%; border: 1px solid black; padding: 6px; text-align: left; font-size: 9px;">
-                                <b>CODIGO:</b> CIR-FT-01<br>
-                                <b>VERSION:</b> 01<br>
-                                <b>VIGENCIA:</b> 24/06/2028<br>
-                                <b>PAGINA:</b> 01
-                            </td>
-                        </tr>
-                    </table>
-                    <br>
-                    <table style="width:100%; border: 1px solid black; border-collapse: collapse; font-size: 11px;">
-                        <tr>
-                            <td style="border: 1px solid black; padding: 5px;"><b>MÉTODO:</b> VAPOR: [ {is_vap_prev} ]  OXIDO DE ETILENO: [ {is_eo_prev} ]</td>
-                            <td style="border: 1px solid black; padding: 5px;"><b>N° ESTERILIZADOR:</b> {c_sel['equipo']}</td>
-                        </tr>
-                        <tr>
-                            <td style="border: 1px solid black; padding: 5px;"><b>N° CICLO:</b> {cod_ciclo_fmt}</td>
-                            <td style="border: 1px solid black; padding: 5px;"><b>FECHA:</b> {c_sel['fecha']}</td>
-                        </tr>
-                        <tr>
-                            <td style="border: 1px solid black; padding: 5px;"><b>HORA DE INICIO:</b> {c_sel['hora_inicio']}</td>
-                            <td style="border: 1px solid black; padding: 5px;"><b>HORA DE FINALIZACIÓN:</b> {c_sel['hora_fin']}</td>
-                        </tr>
-                        <tr>
-                            <td style="border: 1px solid black; padding: 5px;"><b>CONTROL FISICO - TEMPERATURA:</b> {c_sel['temp']} °C</td>
-                            <td style="border: 1px solid black; padding: 5px;"><b>PRESIÓN DE CÁMARA:</b> {c_sel.get('presion_camara', '-49kPa')}</td>
-                        </tr>
-                        <tr>
-                            <td style="border: 1px solid black; padding: 5px;"><b>TIEMPO EXPOSICIÓN:</b> {c_sel['t_exp']} Min</td>
-                            <td style="border: 1px solid black; padding: 5px;"><b>TIPO DE CARGA:</b> {c_sel['observaciones']}</td>
-                        </tr>
-                        <tr>
-                            <td style="border: 1px solid black; padding: 5px;"><b>NOMBRE RESPONSABLE DE ESTERILIZACIÓN:</b> {c_sel['operador']}</td>
-                            <td style="border: 1px solid black; padding: 5px;"><b>RESULTADO PROCESO:</b> {c_sel['resultado']}</td>
-                        </tr>
-                    </table>
-                    <br>
-                    <table style="width:100%; border: 1px solid black; border-collapse: collapse; font-size: 11px;">
-                        <tr style="background-color: #f0f0f0;">
-                            <th style="border: 1px solid black; padding: 5px; text-align: left;">DESCRIPCIÓN DE CARGA</th>
-                            <th style="border: 1px solid black; padding: 5px; text-align: center;">CANT.</th>
-                            <th style="border: 1px solid black; padding: 5px; text-align: center;">LOTE</th>
-                        </tr>
-                        {items_html_inf}
-                        <tr style="background-color: #f9f9f9; font-weight: bold;">
-                            <td style="border: 1px solid black; padding: 5px;">TOTALES: {c_sel['tot_peso']} kg ({c_sel['ocupacion']}% Ocupación)</td>
-                            <td style="border: 1px solid black; padding: 5px; text-align: center;">{c_sel['tot_unidades']} U</td>
-                            <td style="border: 1px solid black; padding: 5px; text-align: center;">Canastas: {c_sel['canastas_grandes']}G / {c_sel['canastas_pequenas']}P</td>
-                        </tr>
-                    </table>
-                    <br>
-                    <table style="width:100%; border: 1px solid black; border-collapse: collapse; font-size: 11px;">
-                        <tr>
-                            <td style="width:50%; border: 1px solid black; padding: 6px; vertical-align: top;">
-                                <b>STIKER INDICADOR BIOLOGICO</b><br><br><br>
-                                <span style="color: gray; font-style: italic;">(Pegar sticker de lectura aquí)</span>
-                            </td>
-                            <td style="width:50%; border: 1px solid black; padding: 6px; vertical-align: top;">
-                                <b>CONTROL DE CARGA</b><br><br>
-                                <b>RESULTADO DE LECTURA:</b><br>
-                                POSITIVO: [ {res_pos_prev} ] &nbsp;&nbsp; NEGATIVO: [ {res_neg_prev} ]<br><br>
-                                <b>NOMBRE RESPONSABLE DE LECTURA INDICADOR:</b><br>
-                                {c_sel['operador']}
-                            </td>
-                        </tr>
-                    </table>
-                    <br>
-                    <table style="width:100%; border: 1px solid black; border-collapse: collapse; font-size: 11px;">
-                        <tr>
-                            <td style="border: 1px solid black; padding: 6px; height: 50px; vertical-align: top;">
-                                <b>TIRILLA INDICADORA INTERNA / CONTROL DE EXPOSICIÓN / INDICADOR QUIMICO EXTERNO</b><br><br>
-                                <span style="color: gray; font-style: italic;">(Espacio reservado para fijación de tirilla física de control)</span>
-                            </td>
-                        </tr>
-                    </table>
-                </div>
-                """, unsafe_allow_html=True)
-
-                st.write("")
                 
-                pdf_buffer = generar_pdf_informe(c_sel)
+                # LLAMADA AL NUEVO GENERADOR EXTERNO CON DATOS ADAPTADOS
+                pdf_buffer = generar_pdf_informe(datos_para_pdf)
+                
                 st.download_button(
-                    label=f"📥 Descargar {nombre_oficial_doc}.pdf",
+                    label=f"📥 Descargar EL CONTROL DEL PROCESO DE ESTERILIZACIÓN - {int(c_sel['n_ciclo']):05d}.docx",
                     data=pdf_buffer,
-                    file_name=f"{nombre_oficial_doc}.pdf",
-                    mime="application/pdf",
+                    file_name=f"Informe_Ciclo_{int(c_sel['n_ciclo']):05d}.docx",
+                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
                     type="primary"
                 )
         else:
