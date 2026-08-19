@@ -5,46 +5,153 @@ import json
 from datetime import datetime, timedelta
 from io import BytesIO
 
-# --- IMPORTACIÓN DEL NUEVO GENERADOR EXTERNO ---
-from reports.pdf_generator import generar_pdf_informe
-
-# --- CONFIGURACIÓN DE PÁGINA ---
+# --- CONFIGURACIÓN DE LA PESTAÑA DEL NAVEGADOR ---
 st.set_page_config(
-    page_title="EsterilControl - AM Medical",
-    page_icon="🔵",
+    page_title="EsterilControl",
+    page_icon="assets/logo_esterilcontrol.jpg",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-st.markdown("""
+# --- IMPORTACIÓN DEL NUEVO GENERADOR EXTERNO ---
+from reports.pdf_generator import generar_pdf_informe
+
+# --- GESTIÓN DE TEMA (CLARO / OSCURO) ---
+if "tema_app" not in st.session_state:
+    st.session_state.tema_app = "Claro"
+
+# Estilos CSS dinámicos optimizados para corregir contraste en Modo Oscuro y Modo Claro
+if st.session_state.tema_app == "Oscuro":
+    css_estilos = """
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
         html, body, [class*="css"], .stText, .stMarkdown, h1, h2, h3, h4, h5, h6 {
             font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif !important;
+            color: #f8fafc !important;
         }
-        h1 { font-size: 1.5rem !important; }
-        h2 { font-size: 1.3rem !important; }
-        h3 { font-size: 1.1rem !important; }
-        h4 { font-size: 0.95rem !important; }
+        .stApp {
+            background-color: #0f172a !important;
+        }
+        /* Corrección de la franja superior de Streamlit */
+        header[data-testid="stHeader"] {
+            background-color: rgba(15, 23, 42, 0) !important;
+        }
+        section[data-testid="stSidebar"] {
+            background-color: #1e293b !important;
+            border-right: 1px solid #334155;
+        }
+        section[data-testid="stSidebar"] .stMarkdown, section[data-testid="stSidebar"] span, section[data-testid="stSidebar"] p {
+            color: #f8fafc !important;
+        }
+        h1 { font-size: 1.5rem !important; color: #f8fafc !important; }
+        h2 { font-size: 1.3rem !important; color: #f8fafc !important; }
+        h3 { font-size: 1.1rem !important; color: #f8fafc !important; }
+        h4 { font-size: 0.95rem !important; color: #cbd5e1 !important; }
         
+        div[data-testid="stMetric"] {
+            background-color: #1e293b !important;
+            border: 1px solid #334155 !important;
+            padding: 15px !important;
+            border-radius: 12px !important;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3) !important;
+        }
         div[data-testid="stMetricValue"] {
-            font-size: 1.25rem !important;
+            font-size: 1.3rem !important;
+            color: #f8fafc !important;
         }
         div[data-testid="stMetricLabel"] {
             font-size: 0.75rem !important;
+            color: #94a3b8 !important;
         }
+        /* Corrección definitiva para que los botones se vean perfectamente en Modo Oscuro */
+        .stButton button {
+            background-color: #334155 !important;
+            color: #f8fafc !important;
+            border: 1px solid #475569 !important;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.85rem !important;
+        }
+        .stButton button:hover {
+            background-color: #475569 !important;
+            color: #ffffff !important;
+            border-color: #64748b !important;
+        }
+        /* Corrección de inputs y textos en modo oscuro */
+        .stTextInput input, .stNumberInput input, .stSelectbox div[data-baseweb="select"] {
+            color: #f8fafc !important;
+            background-color: #1e293b !important;
+        }
+        p, span, label {
+            color: #e2e8f0 !important;
+        }
+    </style>
+    """
+else:
+    css_estilos = """
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+        html, body, [class*="css"], .stText, .stMarkdown, h1, h2, h3, h4, h5, h6 {
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif !important;
+            color: #1e293b !important;
+        }
+        .stApp {
+            background-color: #f8fafc !important;
+        }
+        header[data-testid="stHeader"] {
+            background-color: rgba(248, 250, 252, 0) !important;
+        }
+        section[data-testid="stSidebar"] {
+            background-color: #ffffff !important;
+            border-right: 1px solid #e2e8f0;
+        }
+        h1 { font-size: 1.5rem !important; color: #0f172a !important; }
+        h2 { font-size: 1.3rem !important; color: #0f172a !important; }
+        h3 { font-size: 1.1rem !important; color: #0f172a !important; }
+        h4 { font-size: 0.95rem !important; color: #334155 !important; }
         
+        div[data-testid="stMetric"] {
+            background-color: #ffffff !important;
+            border: 1px solid #e2e8f0 !important;
+            padding: 15px !important;
+            border-radius: 12px !important;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05) !important;
+        }
+        div[data-testid="stMetricValue"] {
+            font-size: 1.3rem !important;
+            color: #0f172a !important;
+        }
+        div[data-testid="stMetricLabel"] {
+            font-size: 0.75rem !important;
+            color: #64748b !important;
+        }
         .stButton button {
             border-radius: 8px;
             font-weight: 600;
             font-size: 0.85rem !important;
         }
     </style>
-""", unsafe_allow_html=True)
+    """
+
+st.markdown(css_estilos, unsafe_allow_html=True)
 
 LOGO_PATH = "assets/logo_esterilcontrol.jpg"
 DB_CICLOS_FILE = "ciclos_db.json"
 DB_IB_FILE = "ib_db.json"
+
+# --- GENERADORES DE HORA Y MINUTOS EXACTOS (12 HORAS AM/PM) ---
+LISTA_HORAS_BASE = [f"{h:02d}" for h in range(1, 13)]
+LISTA_MINUTOS = [f"{m:02d}" for m in range(60)]
+LISTA_AM_PM = ["a.m.", "p.m."]
+
+def obtener_hora_minuto_actual():
+    now = datetime.now()
+    hora = now.hour
+    minuto = now.minute
+    ampm = "p.m." if hora >= 12 else "a.m."
+    h_12 = hora % 12
+    h_12 = 12 if h_12 == 0 else h_12
+    return f"{h_12:02d}", f"{minuto:02d}", ampm
 
 # --- GESTIÓN DE USUARIOS EN SESSION STATE ---
 if "usuarios_db" not in st.session_state:
@@ -144,12 +251,23 @@ if not st.session_state.autenticado:
 # 2. APLICACIÓN PRINCIPAL
 # ==========================================
 else:
+    # --- BOTÓN DE MODO OSCURO / CLARO UBICADO ARRIBA A LA DERECHA (JUNTO A LOS TRES PUNTOS) ---
+    top_c1, top_c2 = st.columns([10, 1])
+    with top_c2:
+        tooltip_txt = "Cambiar a Modo Claro" if st.session_state.tema_app == "Oscuro" else "Cambiar a Modo Oscuro"
+        icono_btn = "☀️" if st.session_state.tema_app == "Oscuro" else "🌙"
+        if st.button(icono_btn, help=tooltip_txt, key="btn_toggle_tema_top"):
+            st.session_state.tema_app = "Claro" if st.session_state.tema_app == "Oscuro" else "Oscuro"
+            st.rerun()
+
     with st.sidebar:
         mostrar_logo(width=140)
         st.caption("AM Medical - Control EtO")
         st.markdown(f"**Usuario:** {st.session_state.usuario_actual}")
         st.markdown(f"**Rol:** `{st.session_state.rol_actual.upper()}`")
         
+        st.markdown("---")
+
         if st.button("🚪 Cerrar Sesión", use_container_width=True):
             st.session_state.autenticado = False
             st.rerun()
@@ -164,7 +282,7 @@ else:
 
         opcion = st.radio("Navegación", lista_nav)
 
-    st.title("EsterilControl")
+    st.title("Control de ésteres")
 
     # --- PANEL DE CONTROL ---
     if opcion == "Panel de control":
@@ -188,15 +306,39 @@ else:
         c2.metric(f"CICLOS {nombre_mes.upper()}", str(total_ciclos_mes))
         c3.metric("EN CUARENTENA", str(len([x for x in st.session_state.ciclos_db if x.get('carga_liberada', 'No') == 'No'])))
         c4.metric("TOTAL HISTÓRICO", str(len(st.session_state.ciclos_db)))
-        c5.metric("ESTADO SISTEMA", "Activo", "Disco Local")
+        c5.metric("ESTADO SISTEMA", "Activo", "Discoteca local")
         
         st.markdown("---")
-        st.subheader(f"Últimos Ciclos Procesados")
+        st.subheader(f"Últimos Ciclos Procesados y Alertas")
         
         if not df_c.empty:
             df_c = df_c.sort_values(by=["fecha", "n_ciclo"], ascending=[False, False])
-            cols_ver = ["n_ciclo", "fecha", "hora_inicio", "hora_fin", "equipo", "operador", "tot_unidades", "tot_peso", "ocupacion", "carga_liberada"]
-            st.dataframe(df_c[[col for col in cols_ver if col in df_c.columns]], use_container_width=True)
+            
+            for index, row in df_c.iterrows():
+                n_c_fmt = f"{int(row['n_ciclo']):05d}"
+                estado_lib = row.get('carga_liberada', 'No')
+                res_ib_val = row.get('res_ib', 'Negativo')
+                
+                if st.session_state.tema_app == "Oscuro":
+                    color_fondo = "#1e293b"
+                    borde_tarjeta = "#334155"
+                    texto_color = "#f8fafc"
+                else:
+                    color_fondo = "#f8f9fa"
+                    borde_tarjeta = "#ddd"
+                    texto_color = "#1e293b"
+
+                badge_estado = "🟡 En Proceso / Cuarentena"
+                if "Rechazado" in estado_lib or res_ib_val == "Positivo":
+                    badge_estado = f"🔴 {estado_lib} (¡Alerta IB Positivo!)" if res_ib_val == "Positivo" else f"🔴 {estado_lib}"
+                elif estado_lib == "Sí":
+                    badge_estado = "🟢 Liberado y Conforme"
+
+                st.markdown(f"""
+                <div style="background-color: {color_fondo}; padding: 12px 16px; border-radius: 10px; margin-bottom: 10px; border: 1px solid {borde_tarjeta}; font-size: 0.88rem; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
+                    <span style="color: {texto_color};"><b>Ciclo N° {n_c_fmt}</b> | Fecha: {row['fecha']} | Equipo: {row['equipo']} | Unidades: {row['tot_unidades']} | IB: <b>{res_ib_val}</b> | Estado: <b>{badge_estado}</b></span>
+                </div>
+                """, unsafe_allow_html=True)
         else:
             st.info("No hay ciclos registrados todavía.")
 
@@ -212,10 +354,40 @@ else:
                     n_ciclo = st.number_input("N° CICLO:", value=len(st.session_state.ciclos_db) + 1, step=1)
                 with fc2:
                     fecha_c = st.date_input("FECHA:", datetime.now())
+                
+                h_act, m_act, ampm_act = obtener_hora_minuto_actual()
+                
                 with fc3:
-                    hora_i = st.text_input("HORA INICIO (Ej: 11:03 AM):", "11:03 AM")
+                    st.markdown("**HORA INICIO:**")
+                    hi_col1, hi_col2, hi_col3 = st.columns(3)
+                    idx_h_def = LISTA_HORAS_BASE.index(h_act) if h_act in LISTA_HORAS_BASE else 0
+                    idx_m_def = LISTA_MINUTOS.index(m_act) if m_act in LISTA_MINUTOS else 0
+                    idx_ampm_def = LISTA_AM_PM.index(ampm_act) if ampm_act in LISTA_AM_PM else 0
+                    
+                    with hi_col1:
+                        sel_hi_h = st.selectbox("H", LISTA_HORAS_BASE, index=idx_h_def, key="reg_hi_h")
+                    with hi_col2:
+                        sel_hi_m = st.selectbox("M", LISTA_MINUTOS, index=idx_m_def, key="reg_hi_m")
+                    with hi_col3:
+                        sel_hi_ap = st.selectbox("AM/PM", LISTA_AM_PM, index=idx_ampm_def, key="reg_hi_ap")
+                    
+                    hora_i_final = f"{sel_hi_h}:{sel_hi_m} {sel_hi_ap}"
+
                 with fc4:
-                    hora_f = st.text_input("HORA FIN (Ej: 5:26 PM):", "")
+                    st.markdown("**HORA FIN:**")
+                    hf_tipo = st.selectbox("Estado Fin", ["En curso", "Hora Específica"], key="reg_hf_tipo")
+                    
+                    if hf_tipo == "Hora Específica":
+                        hf_col1, hf_col2, hf_col3 = st.columns(3)
+                        with hf_col1:
+                            sel_hf_h = st.selectbox("H", LISTA_HORAS_BASE, index=idx_h_def, key="reg_hf_h")
+                        with hf_col2:
+                            sel_hf_m = st.selectbox("M", LISTA_MINUTOS, index=idx_m_def, key="reg_hf_m")
+                        with hf_col3:
+                            sel_hf_ap = st.selectbox("AM/PM", LISTA_AM_PM, index=idx_ampm_def, key="reg_hf_ap")
+                        hora_f_final = f"{sel_hf_h}:{sel_hf_m} {sel_hf_ap}"
+                    else:
+                        hora_f_final = ""
 
                 eq1, op1 = st.columns(2)
                 with eq1:
@@ -283,20 +455,19 @@ else:
                     observaciones = st.text_input("TIPO DE CARGA / OBSERVACIONES:", "Textil")
 
                 if st.button("💾 Guardar Ciclo en Sistema", type="primary"):
-                    hora_fin_val = hora_f.strip()
-                    if hora_fin_val:
+                    if hora_f_final:
                         try:
                             fecha_lib = (datetime.combine(fecha_c, datetime.now().time()) + timedelta(hours=49)).strftime("%Y-%m-%d %H:%M")
                         except:
                             fecha_lib = "Pendiente"
                     else:
-                        fecha_lib = "Pendiente"
+                        fecha_lib = "Pendiente (En curso)"
 
                     nuevo_registro = {
                         "n_ciclo": int(n_ciclo),
                         "fecha": str(fecha_c),
-                        "hora_inicio": hora_i.strip(),
-                        "hora_fin": hora_fin_val,
+                        "hora_inicio": hora_i_final,
+                        "hora_fin": hora_f_final,
                         "equipo": equipo,
                         "operador": operador,
                         "temp": temp,
@@ -325,8 +496,21 @@ else:
                         "observaciones": observaciones
                     }
                     st.session_state.ciclos_db.append(nuevo_registro)
+                    
+                    existe_ib = any(int(ib.get('ciclo', 0)) == int(n_ciclo) for ib in st.session_state.ib_db)
+                    if not existe_ib:
+                        st.session_state.ib_db.append({
+                            "ciclo": int(n_ciclo),
+                            "tipo": "BT10 EO ATCC 9372",
+                            "lote": "A50300",
+                            "resultado": "Negativo",
+                            "fecha_incubacion": str(fecha_c),
+                            "responsable": operador,
+                            "observaciones": "Conforme (Automático)"
+                        })
+
                     guardar_datos_disco()
-                    st.success(f"¡Ciclo N° {f'{n_ciclo:05d}'} registrado y guardado con éxito!")
+                    st.success(f"¡Ciclo N° {f'{n_ciclo:05d}'} y su control biológico automático guardados con éxito!")
                     st.rerun()
         else:
             st.info("👁️ **Modo Visitante / Auditor:** Solo lectura.")
@@ -338,8 +522,9 @@ else:
             ciclos_ordenados = sorted(st.session_state.ciclos_db, key=lambda x: (x['fecha'], x['n_ciclo']), reverse=True)
             for idx, c in enumerate(ciclos_ordenados):
                 cod_c_fmt = f"{int(c['n_ciclo']):05d}"
+                estado_h_fin = c['hora_fin'] if c['hora_fin'] else "⚠️ EN CURSO"
                 
-                with st.expander(f"🔹 CICLO N° {cod_c_fmt} | Fecha: {c['fecha']} | Equipo: {c['equipo']} | Unidades: {c['tot_unidades']} | Peso: {c['tot_peso']} kg"):
+                with st.expander(f"🔹 CICLO N° {cod_c_fmt} | Fecha: {c['fecha']} | Fin: {estado_h_fin} | Equipo: {c['equipo']} | Unidades: {c['tot_unidades']}", key=f"exp_ciclo_{idx}_{c['n_ciclo']}"):
                     
                     st.markdown("#### ⚙️ Datos Técnicos del Ciclo")
                     dc1, dc2, dc3, dc4 = st.columns(4)
@@ -383,24 +568,47 @@ else:
                     else:
                         st.info("No hay ítems registrados en este ciclo.")
 
-                    if not c['hora_fin'] and st.session_state.rol_actual in ["admin", "supervisor", "dueno"]:
+                    if not c.get('hora_fin') and st.session_state.rol_actual in ["admin", "supervisor", "dueno"]:
                         st.markdown("---")
-                        col_fin1, col_fin2 = st.columns([2, 1])
-                        with col_fin1:
-                            input_hf_manual = st.text_input(f"Asignar Hora Fin para Ciclo {cod_c_fmt}", value="5:26 PM", key=f"txt_hf_{c['n_ciclo']}")
-                        with col_fin2:
+                        st.write("⚙️ **Finalizar Ciclo en Curso:**")
+                        
+                        col_fin_btn, col_fin_sel = st.columns([1, 2])
+                        
+                        with col_fin_btn:
                             st.write("")
-                            if st.button(f"⏱️ Finalizar Ciclo", key=f"btn_fin_{c['n_ciclo']}", type="primary"):
-                                c['hora_fin'] = input_hf_manual.strip()
+                            if st.button(f"⏱️ Ciclo terminado", key=f"btn_fin_{idx}_{c['n_ciclo']}", type="primary"):
+                                h_act_s, m_act_s, ampm_act_s = obtener_hora_minuto_actual()
+                                hora_actual_exacta = f"{h_act_s}:{m_act_s} {ampm_act_s}"
+                                c['hora_fin'] = hora_actual_exacta
                                 c['fecha_liberacion'] = (datetime.now() + timedelta(hours=49)).strftime("%Y-%m-%d %H:%M")
                                 guardar_datos_disco()
-                                st.success("¡Ciclo finalizado!")
+                                st.success(f"¡Ciclo finalizado con la hora actual ({hora_actual_exacta})!")
                                 st.rerun()
+
+                        with col_fin_sel:
+                            st.markdown("O selecciona hora exacta manual:")
+                            h_m_col1, h_m_col2, h_m_col3, h_m_col4 = st.columns([1, 1, 1, 1.2])
+                            with h_m_col1:
+                                sh_h = st.selectbox("H", LISTA_HORAS_BASE, key=f"hist_sh_h_{idx}_{c['n_ciclo']}")
+                            with h_m_col2:
+                                sh_m = st.selectbox("M", LISTA_MINUTOS, key=f"hist_sh_m_{idx}_{c['n_ciclo']}")
+                            with h_m_col3:
+                                sh_ap = st.selectbox("AM/PM", LISTA_AM_PM, key=f"hist_sh_ap_{idx}_{c['n_ciclo']}")
+                            with h_m_col4:
+                                st.write("")
+                                if st.button("Guardar Hora", key=f"btn_guardar_h_{idx}_{c['n_ciclo']}"):
+                                    hora_manual_formada = f"{sh_h}:{sh_m} {sh_ap}"
+                                    c['hora_fin'] = hora_manual_formada
+                                    c['fecha_liberacion'] = (datetime.now() + timedelta(hours=49)).strftime("%Y-%m-%d %H:%M")
+                                    guardar_datos_disco()
+                                    st.success(f"¡Hora fin actualizada a {hora_manual_formada}!")
+                                    st.rerun()
 
                     if st.session_state.rol_actual in ["admin", "dueno"]:
                         st.markdown("---")
-                        if st.button(f"🗑️ Eliminar Ciclo N° {cod_c_fmt}", key=f"del_ciclo_{c['n_ciclo']}"):
+                        if st.button(f"🗑️ Eliminar Ciclo N° {cod_c_fmt}", key=f"del_ciclo_{idx}_{c['n_ciclo']}"):
                             st.session_state.ciclos_db = [x for x in st.session_state.ciclos_db if x['n_ciclo'] != c['n_ciclo']]
+                            st.session_state.ib_db = [x for x in st.session_state.ib_db if int(x.get('ciclo', 0)) != int(c['n_ciclo'])]
                             guardar_datos_disco()
                             st.rerun()
         else:
@@ -408,10 +616,10 @@ else:
 
     # --- CONTROL DE INCUBACIÓN ---
     elif opcion == "Control de Incubación":
-        st.subheader("Control de Indicadores Biológicos")
+        st.subheader("Control de Indicadores Biológicos (IB)")
         
         if st.session_state.rol_actual in ["admin", "supervisor", "dueno"]:
-            with st.expander("➕ REGISTRAR RESULTADO DE INDICADOR BIOLÓGICO", expanded=False):
+            with st.expander("➕ REGISTRO HISTÓRICO / ADICIONAL DE INDICADOR BIOLÓGICO", expanded=False):
                 ib_c1, ib_c2, ib_c3 = st.columns(3)
                 with ib_c1:
                     ciclo_asoc = st.number_input("Asociar a N° Ciclo", value=1, step=1)
@@ -425,19 +633,31 @@ else:
                 
                 obs_ib = st.text_input("Observaciones IB", "Conforme")
 
-                if st.button("💾 Guardar Indicador Biológico", type="primary"):
-                    st.session_state.ib_db.append({
-                        "ciclo": ciclo_asoc,
-                        "tipo": tipo_ib,
-                        "lote": lote_ib,
-                        "resultado": res_lectura,
-                        "fecha_incubacion": str(fecha_incubacion),
-                        "responsable": resp_ib,
-                        "observaciones": obs_ib,
-                        "fecha_registro": str(datetime.now().date())
-                    })
+                if st.button("💾 Guardar / Actualizar Indicador Biológico Manual", type="primary"):
+                    encontrado = False
+                    for ib in st.session_state.ib_db:
+                        if int(ib.get('ciclo', 0)) == int(ciclo_asoc):
+                            ib['tipo'] = tipo_ib
+                            ib['lote'] = lote_ib
+                            ib['resultado'] = res_lectura
+                            ib['fecha_incubacion'] = str(fecha_incubacion)
+                            ib['responsable'] = resp_ib
+                            ib['observaciones'] = obs_ib
+                            encontrado = True
+                    
+                    if not encontrado:
+                        st.session_state.ib_db.append({
+                            "ciclo": int(ciclo_asoc),
+                            "tipo": tipo_ib,
+                            "lote": lote_ib,
+                            "resultado": res_lectura,
+                            "fecha_incubacion": str(fecha_incubacion),
+                            "responsable": resp_ib,
+                            "observaciones": obs_ib
+                        })
+
                     for c in st.session_state.ciclos_db:
-                        if c['n_ciclo'] == ciclo_asoc:
+                        if int(c['n_ciclo']) == int(ciclo_asoc):
                             c['res_ib'] = res_lectura
                     
                     guardar_datos_disco()
@@ -445,33 +665,165 @@ else:
                     st.rerun()
 
         st.markdown("---")
-        st.subheader("Historial de Indicadores Biológicos")
-        if st.session_state.ib_db:
-            st.dataframe(pd.DataFrame(st.session_state.ib_db), use_container_width=True)
+        st.subheader("Visualización Interactiva por Desglose de Indicadores Biológicos")
+        
+        if st.session_state.ciclos_db:
+            ib_unicos = {}
+            for ib in st.session_state.ib_db:
+                ib_unicos[int(ib.get('ciclo', 0))] = ib
+            st.session_state.ib_db = list(ib_unicos.values())
+
+            ibs_existentes = [int(ib.get('ciclo', 0)) for ib in st.session_state.ib_db]
+            for c in st.session_state.ciclos_db:
+                if int(c['n_ciclo']) not in ibs_existentes:
+                    st.session_state.ib_db.append({
+                        "ciclo": int(c['n_ciclo']),
+                        "tipo": "BT10 EO ATCC 9372",
+                        "lote": "A50300",
+                        "resultado": c.get('res_ib', 'Negativo'),
+                        "fecha_incubacion": c['fecha'],
+                        "responsable": c['operador'],
+                        "observaciones": "Creado automáticamente"
+                    })
+
+            ib_ordenados = sorted(st.session_state.ib_db, key=lambda x: int(x.get('ciclo', 0)), reverse=True)
+            
+            for idx_ib, ib in enumerate(ib_ordenados):
+                c_num = int(ib.get('ciclo', 0))
+                res_actual = ib.get('resultado', 'Negativo')
+                icono_estado = "🟢 Negativo (Conforme)" if res_actual == "Negativo" else "🔴 Positivo (¡Alerta!)"
+                
+                with st.expander(f"🧬 INDICADOR BIOLÓGICO - CICLO N° {c_num:05d} | Resultado: {icono_estado} | Lote: {ib.get('lote', '-')}", key=f"exp_ib_{idx_ib}_{c_num}"):
+                    
+                    if st.session_state.rol_actual in ["admin", "supervisor", "dueno"]:
+                        with st.form(key=f"form_upd_ib_{idx_ib}_{c_num}"):
+                            ib_col1, ib_col2, ib_col3 = st.columns(3)
+                            with ib_col1:
+                                nuevo_tipo = st.text_input("Tipo Indicador", ib.get('tipo', 'BT10 EO ATCC 9372'), key=f"n_tipo_{idx_ib}_{c_num}")
+                                nuevo_lote = st.text_input("Lote IB", ib.get('lote', 'A50300'), key=f"n_lote_{idx_ib}_{c_num}")
+                            with ib_col2:
+                                nuevo_res = st.selectbox("Resultado (48h)", ["Negativo", "Positivo"], index=0 if ib.get('resultado', 'Negativo') == "Negativo" else 1, key=f"n_res_{idx_ib}_{c_num}")
+                                nuevo_resp = st.text_input("Responsable", ib.get('responsable', st.session_state.usuario_actual), key=f"n_resp_{idx_ib}_{c_num}")
+                            with ib_col3:
+                                nueva_obs = st.text_input("Observaciones", ib.get('observaciones', ''), key=f"n_obs_{idx_ib}_{c_num}")
+                                st.write("")
+                                btn_act_ib = st.form_submit_button("💾 Actualizar Indicador")
+                            
+                            if btn_act_ib:
+                                ib['tipo'] = nuevo_tipo
+                                ib['lote'] = nuevo_lote
+                                ib['resultado'] = nuevo_res
+                                ib['responsable'] = nuevo_resp
+                                ib['observaciones'] = nueva_obs
+                                
+                                for c in st.session_state.ciclos_db:
+                                    if int(c['n_ciclo']) == c_num:
+                                        c['res_ib'] = nuevo_res
+                                        
+                                guardar_datos_disco()
+                                st.success("¡Indicador biológico actualizado con éxito!")
+                                st.rerun()
+
+                        if st.session_state.rol_actual in ["admin", "dueno"]:
+                            if st.button(f"🗑️ Eliminar Registro IB Ciclo {c_num:05d}", key=f"del_ib_{idx_ib}_{c_num}"):
+                                st.session_state.ib_db = [x for x in st.session_state.ib_db if int(x.get('ciclo', 0)) != c_num]
+                                guardar_datos_disco()
+                                st.warning(f"Registro IB del ciclo {c_num:05d} eliminado.")
+                                st.rerun()
+                    else:
+                        st.write(f"**Tipo:** {ib.get('tipo')}")
+                        st.write(f"**Lote:** {ib.get('lote')}")
+                        st.write(f"**Resultado:** {ib.get('resultado')}")
+                        st.write(f"**Fecha Incubación:** {ib.get('fecha_incubacion')}")
+                        st.write(f"**Responsable:** {ib.get('responsable')}")
+                        st.write(f"**Observaciones:** {ib.get('observaciones')}")
         else:
-            st.info("No hay indicadores biológicos registrados.")
+            st.info("No hay ciclos ni indicadores biológicos para mostrar.")
 
     # --- LIBERACIÓN ---
     elif opcion == "Liberación":
-        st.subheader("Liberación de Carga")
+        st.subheader("Liberación de Carga (Validación Estricta por Control Biológico)")
         if st.session_state.ciclos_db:
-            for c in st.session_state.ciclos_db:
-                cod_c_fmt = f"{int(c['n_ciclo']):05d}"
-                st.markdown(f"""
-                <div style="background-color: #f8f9fa; padding: 12px; border-radius: 8px; border-left: 4px solid #0052cc; margin-bottom: 10px; font-size: 0.9rem;">
-                    <h4>📦 Ciclo N° {cod_c_fmt} | Fecha: {c['fecha']} (Fin: {c['hora_fin'] if c['hora_fin'] else 'En Proceso'})</h4>
-                    <p><b>Estado Carga Liberada:</b> <code>{c.get('carga_liberada', 'No')}</code> | <b>Fecha Prevista Liberación (49h):</b> {c.get('fecha_liberacion', 'Pendiente')}</p>
-                    <p><b>Control Biológico:</b> {c.get('res_ib', 'Negativo')} | <b>Unidades:</b> {c['tot_unidades']} | <b>Peso:</b> {c['tot_peso']} kg</p>
-                </div>
-                """, unsafe_allow_html=True)
+            for idx_l, c in enumerate(st.session_state.ciclos_db):
+                c_num_int = int(c['n_ciclo'])
+                cod_c_fmt = f"{c_num_int:05d}"
                 
-                if c.get('carga_liberada', 'No') == 'No' and c['hora_fin']:
-                    if st.session_state.rol_actual in ["admin", "supervisor", "dueno"]:
-                        if st.button(f"✅ Aprobar y Liberar Carga Ciclo {cod_c_fmt}", key=f"lib_btn_{c['n_ciclo']}", type="primary"):
-                            c['carga_liberada'] = "Sí"
-                            guardar_datos_disco()
-                            st.success(f"¡Carga del Ciclo N° {cod_c_fmt} liberada!")
-                            st.rerun()
+                ib_asoc = next((ib for ib in st.session_state.ib_db if int(ib.get('ciclo', 0)) == c_num_int), None)
+                res_ib_ciclo = ib_asoc.get('resultado', 'Negativo') if ib_asoc else c.get('res_ib', 'Negativo')
+                
+                estado_carga_actual = c.get('carga_liberada', 'No')
+                
+                color_borde = "#0052cc"
+                if "Rechazado" in estado_carga_actual or res_ib_ciclo == "Positivo":
+                    color_borde = "#dc3545"
+                elif estado_carga_actual == "Sí":
+                    color_borde = "#28a745"
+
+                bg_card_lib = "#1e293b" if st.session_state.tema_app == "Oscuro" else "#f8f9fa"
+                text_card_lib = "#f8fafc" if st.session_state.tema_app == "Oscuro" else "#1e293b"
+
+                with st.container():
+                    st.markdown(f"""
+                    <div style="background-color: {bg_card_lib}; padding: 14px; border-radius: 10px; border-left: 6px solid {color_borde}; margin-bottom: 8px; font-size: 0.9rem; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+                        <h4 style="color: {text_card_lib}; margin-bottom: 5px;">📦 Ciclo N° {cod_c_fmt} | Fecha: {c['fecha']} (Fin: {c['hora_fin'] if c['hora_fin'] else 'En curso'})</h4>
+                        <p style="color: {text_card_lib}; margin-bottom: 3px;"><b>Estado Carga:</b> <code>{estado_carga_actual}</code> | <b>Control Biológico (IB):</b> <span style="color: {'red' if res_ib_ciclo == 'Positivo' else 'green'}; font-weight: bold;">{res_ib_ciclo}</span></p>
+                        <p style="color: {text_card_lib}; margin-bottom: 0px;"><b>Fecha Prevista Liberación (49h):</b> {c.get('fecha_liberacion', 'Pendiente')} | <b>Unidades:</b> {c['tot_unidades']} | <b>Peso:</b> {c['tot_peso']} kg</p>
+                    </div>
+                    """, unsafe_allow_html=True)
+                    
+                    if c.get('hora_fin') and st.session_state.rol_actual in ["admin", "supervisor", "dueno"]:
+                        if estado_carga_actual == "Sí":
+                            if st.session_state.rol_actual in ["admin", "dueno"]:
+                                if st.button(f"↩️ Quitar Liberación (Admin) - Ciclo {cod_c_fmt}", key=f"btn_quitar_lib_{c_num_int}", type="secondary"):
+                                    c['carga_liberada'] = "No"
+                                    guardar_datos_disco()
+                                    st.success(f"¡Carga del Ciclo N° {cod_c_fmt} regresada a cuarentena!")
+                                    st.rerun()
+                            else:
+                                st.info("🔒 Carga liberada. Solo administración puede revertirla.")
+                        else:
+                            if res_ib_ciclo == "Negativo":
+                                if st.button(f"✅ Aprobar y Liberar Ciclo {cod_c_fmt}", key=f"btn_aprobar_lib_{c_num_int}", type="primary"):
+                                    c['carga_liberada'] = "Sí"
+                                    guardar_datos_disco()
+                                    st.success(f"¡Carga del Ciclo N° {cod_c_fmt} liberada con éxito!")
+                                    st.rerun()
+                            else:
+                                st.warning("⚠️ Bloqueado: El IB es Positivo.")
+
+                        if estado_carga_actual == "Rechazado (IB Positivo)":
+                            if st.session_state.rol_actual in ["admin", "dueno"]:
+                                if st.button(f"↩️ Quitar Rechazo IB (Admin) - Ciclo {cod_c_fmt}", key=f"btn_quitar_rej_ib_{c_num_int}", type="secondary"):
+                                    c['carga_liberada'] = "No"
+                                    guardar_datos_disco()
+                                    st.success(f"¡Rechazo IB retirado para el Ciclo N° {cod_c_fmt}!")
+                                    st.rerun()
+                            else:
+                                st.info("🔒 Rechazado por IB. Requiere administración.")
+                        else:
+                            if st.button(f"🔴 Rechazar por Control Biológico - Ciclo {cod_c_fmt}", key=f"btn_hacer_rej_ib_{c_num_int}"):
+                                c['carga_liberada'] = "Rechazado (IB Positivo)"
+                                guardar_datos_disco()
+                                st.error(f"¡Ciclo {cod_c_fmt} marcado como rechazado por IB positivo!")
+                                st.rerun()
+
+                        if estado_carga_actual == "Rechazado (Daños / Falla)":
+                            if st.session_state.rol_actual in ["admin", "dueno"]:
+                                if st.button(f"↩️ Quitar Rechazo Daños (Admin) - Ciclo {cod_c_fmt}", key=f"btn_quitar_rej_dan_{c_num_int}", type="secondary"):
+                                    c['carga_liberada'] = "No"
+                                    guardar_datos_disco()
+                                    st.success(f"¡Rechazo por daños retirado para el Ciclo N° {cod_c_fmt}!")
+                                    st.rerun()
+                            else:
+                                st.info("🔒 Rechazado por daños. Requiere administración.")
+                        else:
+                            if st.button(f"⚠️ Rechazar por Daños / Novedad - Ciclo {cod_c_fmt}", key=f"btn_hacer_rej_dan_{c_num_int}"):
+                                c['carga_liberada'] = "Rechazado (Daños / Falla)"
+                                guardar_datos_disco()
+                                st.error(f"¡Ciclo {cod_c_fmt} marcado como rechazado por daños!")
+                                st.rerun()
+                    
+                    st.markdown("---")
         else:
             st.info("No hay ciclos registrados.")
 
@@ -488,7 +840,6 @@ else:
             c_sel = next((x for x in st.session_state.ciclos_db if int(x['n_ciclo']) == n_ciclo_sel), None)
 
             if c_sel:
-                # ADAPTADOR DE DATOS PARA EL PDF OFICIAL (Con la llave "lote" corregida)
                 datos_para_pdf = {
                     "metodo": "Óxido de Etileno",
                     "equipo": c_sel.get('equipo', 'HDX-6 EO'),
@@ -496,7 +847,7 @@ else:
                     "n_cic": f"{int(c_sel['n_ciclo']):05d}",
                     "fecha_inicio": c_sel.get('fecha', ''),
                     "hora_inicio": c_sel.get('hora_inicio', ''),
-                    "hora_fin": c_sel.get('hora_fin', 'En Proceso'),
+                    "hora_fin": c_sel.get('hora_fin', 'En curso'),
                     "temperatura": f"{c_sel.get('temp', 30.9)} °C",
                     "presion": c_sel.get('presion_camara', '-49kPa'),
                     "tiempo_exposicion": f"{c_sel.get('t_exp', 120)} Min",
@@ -515,12 +866,10 @@ else:
                     ]
                 }
 
-                # Filtramos solo los ítems que tengan cantidad mayor a 0
                 datos_para_pdf["items"] = [
                     item for item in datos_para_pdf["items"] if item["cantidad"] > 0
                 ]
                 
-                # LLAMADA AL NUEVO GENERADOR EXTERNO CON DATOS ADAPTADOS
                 pdf_buffer = generar_pdf_informe(datos_para_pdf)
                 
                 st.download_button(
@@ -547,8 +896,9 @@ else:
     # --- CONFIGURACIÓN MAESTRO (DUEÑO) ---
     elif opcion == "🔑 Configuración Maestro (Dueño)" and st.session_state.rol_actual == "dueno":
         st.subheader("🔐 Panel Maestro (Modo Dueño Oculto)")
-        if st.button("🗑️ Borrar Todo el Historial de Ciclos", type="primary"):
+        if st.button("🗑️ Borrar Todo el Historial de Ciclos e Indicadores", type="primary"):
             st.session_state.ciclos_db = []
+            st.session_state.ib_db = []
             guardar_datos_disco()
-            st.warning("Se ha vaciado todo el registro de ciclos.")
+            st.warning("Se ha vaciado todo el registro de ciclos e indicadores biológicos.")
             st.rerun()
