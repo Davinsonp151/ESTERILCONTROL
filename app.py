@@ -13,8 +13,8 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# --- IMPORTACIÓN DEL NUEVO GENERADOR EXTERNO ---
-from reports.pdf_generator import generar_pdf_informe
+# --- IMPORTACIÓN DE GENERADORES EXTERNOS ---
+from reports.pdf_generator import generar_pdf_informe, generar_orden_entrega
 
 # --- GESTIÓN DE TEMA (CLARO / OSCURO) ---
 if "tema_app" not in st.session_state:
@@ -32,7 +32,6 @@ if st.session_state.tema_app == "Oscuro":
         .stApp {
             background-color: #0f172a !important;
         }
-        /* Corrección de la franja superior de Streamlit */
         header[data-testid="stHeader"] {
             background-color: rgba(15, 23, 42, 0) !important;
         }
@@ -63,7 +62,6 @@ if st.session_state.tema_app == "Oscuro":
             font-size: 0.75rem !important;
             color: #94a3b8 !important;
         }
-        /* Corrección definitiva para que los botones se vean perfectamente en Modo Oscuro */
         .stButton button {
             background-color: #334155 !important;
             color: #f8fafc !important;
@@ -77,7 +75,6 @@ if st.session_state.tema_app == "Oscuro":
             color: #ffffff !important;
             border-color: #64748b !important;
         }
-        /* Corrección de inputs y textos en modo oscuro */
         .stTextInput input, .stNumberInput input, .stSelectbox div[data-baseweb="select"] {
             color: #f8fafc !important;
             background-color: #1e293b !important;
@@ -251,7 +248,6 @@ if not st.session_state.autenticado:
 # 2. APLICACIÓN PRINCIPAL
 # ==========================================
 else:
-    # --- BOTÓN DE MODO OSCURO / CLARO UBICADO ARRIBA A LA DERECHA (JUNTO A LOS TRES PUNTOS) ---
     top_c1, top_c2 = st.columns([10, 1])
     with top_c2:
         tooltip_txt = "Cambiar a Modo Claro" if st.session_state.tema_app == "Oscuro" else "Cambiar a Modo Oscuro"
@@ -827,7 +823,7 @@ else:
         else:
             st.info("No hay ciclos registrados.")
 
-    # --- INFORMES ---
+# --- INFORMES ---
     elif opcion == "Informes":
         st.subheader("Módulo de Informes Oficiales (CIR-FT-01)")
         
@@ -870,17 +866,100 @@ else:
                     item for item in datos_para_pdf["items"] if item["cantidad"] > 0
                 ]
                 
-                pdf_buffer = generar_pdf_informe(datos_para_pdf)
+                # Generación del informe oficial en Word
+                docx_buffer = generar_pdf_informe(datos_para_pdf)
                 
                 st.download_button(
                     label=f"📥 Descargar EL CONTROL DEL PROCESO DE ESTERILIZACIÓN - {int(c_sel['n_ciclo']):05d}.docx",
-                    data=pdf_buffer,
+                    data=docx_buffer,
                     file_name=f"Informe_Ciclo_{int(c_sel['n_ciclo']):05d}.docx",
                     mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
                     type="primary"
                 )
-        else:
-            st.info("Registra al menos un ciclo para poder visualizar y descargar el formato oficial.")
+
+                st.markdown("---")
+                st.subheader("🖨️ Orden de Entrega")
+                
+                if c_sel.get('carga_liberada') == 'Sí':
+                    st.success("Carga liberada con éxito. Ya puede descargar la orden de entrega en Word.")
+                    
+                    def parse_q(val):
+                        try:
+                            return int(val) if val not in [None, ""] else 0
+                        except:
+                            return 0
+
+                   # Diccionario ordenado estrictamente con las llaves correctas de tu base de datos/sesión
+                    items_cargados = [
+                        {
+                            "nombre": "Paquete Laparotomía", 
+                            "lote": str(c_sel.get('l_lap', '')), 
+                            "cantidad": parse_q(c_sel.get('q_lap')), 
+                            "obs": "Conforme"
+                        },
+                        {
+                            "nombre": "Unidad Hemodinamia", 
+                            "lote": str(c_sel.get('l_hemo', '')), 
+                            "cantidad": parse_q(c_sel.get('q_hemo')), 
+                            "obs": "Conforme"
+                        },
+                        {
+                            "nombre": "Cirugía Valledupar", 
+                            "lote": str(c_sel.get('l_cir', '')), 
+                            "cantidad": parse_q(c_sel.get('q_cir')), 
+                            "obs": "Conforme"
+                        },
+                        {
+                            "nombre": "Sábanas Estériles", 
+                            "lote": str(c_sel.get('l_sab', '')), 
+                            "cantidad": parse_q(c_sel.get('q_sab')), 
+                            "obs": "Conforme"
+                        },
+                        {
+                            "nombre": "Paquete Central Adulto", 
+                            "lote": str(c_sel.get('l_adult', '')), 
+                            "cantidad": parse_q(c_sel.get('q_adult')), 
+                            "obs": "Conforme"
+                        },
+                        {
+                            "nombre": "Neurointervencionismo", 
+                            "lote": str(c_sel.get('l_neuro', '')), 
+                            "cantidad": parse_q(c_sel.get('q_neuro')), 
+                            "obs": "Conforme"
+                        },
+                        {
+                            "nombre": "Apósitos Estériles", 
+                            "lote": str(c_sel.get('l_apos', '')), 
+                            "cantidad": parse_q(c_sel.get('q_apos')), 
+                            "obs": "Conforme"
+                        },
+                    ]
+
+                    # Filtrar únicamente los ítems que tengan cantidad mayor a 0
+                    items_filtrados = [item for item in items_cargados if item["cantidad"] > 0]
+
+                    datos_orden = {
+                        "fecha": c_sel.get('fecha', ''),
+                        "n_orden": "0000",
+                        "destino": "AM MEDICAL",
+                        "ciclo_esteril": f"{int(c_sel['n_ciclo']):05d}",
+                        "resp_entrega": "Davinson Peña",
+                        "resp_recepcion": "Jorge Espejero",
+                        "items": items_filtrados
+                    }
+                    
+                    docx_orden = generar_orden_entrega(datos_orden)
+                    
+                    st.download_button(
+                        label=f"📥 Descargar Orden de Entrega - Ciclo {n_ciclo_sel:05d}.docx",
+                        data=docx_orden,
+                        file_name=f"Orden_Entrega_{n_ciclo_sel:05d}.docx",
+                        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                    )
+                else:
+                    st.warning("⚠️ La orden de entrega se encuentra bloqueada y solo estará disponible una vez que el ciclo haya sido aprobado y liberado por un Supervisor o Administrador.")
+        else:   
+            st.info("Registra al menos un ciclo para poder visualizar y descargar los formatos oficiales.")
 
     # --- CONFIGURACIÓN ADMIN ---
     elif opcion == "Configuración Admin" and st.session_state.rol_actual in ["admin", "dueno"]:

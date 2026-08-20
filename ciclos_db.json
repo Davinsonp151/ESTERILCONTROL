@@ -87,7 +87,7 @@
         "ocupacion": 93.8,
         "estado_cumplimiento": "CUMPLE",
         "fecha_liberacion": "2026-08-20 22:29",
-        "carga_liberada": "No",
+        "carga_liberada": "Sí",
         "res_ib": "Negativo",
         "observaciones": "Textil"
     },
@@ -133,7 +133,7 @@
         "ocupacion": 62.5,
         "estado_cumplimiento": "CUMPLE",
         "fecha_liberacion": "2026-08-21 13:02",
-        "carga_liberada": "No",
+        "carga_liberada": "Sí",
         "res_ib": "Negativo",
         "observaciones": "Textil"
     },
