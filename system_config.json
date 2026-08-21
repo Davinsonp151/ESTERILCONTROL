@@ -1,8 +1,0 @@
-{
-    "sistema_detenido": false,
-    "bloquear_informes": false,
-    "bloquear_ciclos": false,
-    "bloquear_liberacion": false,
-    "bloquear_admin": false,
-    "bloquear_supervisor": false
-}
