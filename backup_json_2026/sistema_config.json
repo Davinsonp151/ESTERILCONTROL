@@ -1,0 +1,43 @@
+{
+    "app_bloqueada_general": false,
+    "permisos_roles": {
+        "admin": {
+            "Ciclos / Cargas": true,
+            "Control de Incubación": true,
+            "Liberación": true,
+            "Informes": true
+        },
+        "supervisor": {
+            "Ciclos / Cargas": true,
+            "Control de Incubación": true,
+            "Liberación": true,
+            "Informes": true
+        },
+        "visitante": {
+            "Ciclos / Cargas": true,
+            "Control de Incubación": true,
+            "Liberación": true,
+            "Informes": true
+        }
+    },
+    "usuarios_db": {
+        "admin": {
+            "nombre": "Administrador",
+            "pass": "admin123",
+            "rol": "admin",
+            "activo": true
+        },
+        "supervisor": {
+            "nombre": "Davinson Peña (Supervisor)",
+            "pass": "super123",
+            "rol": "supervisor",
+            "activo": true
+        },
+        "visitante": {
+            "nombre": "Visitante / Auditor",
+            "pass": "visit123",
+            "rol": "visitante",
+            "activo": true
+        }
+    }
+}

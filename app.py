@@ -4,6 +4,10 @@ import os
 import json
 from datetime import datetime, timedelta
 from io import BytesIO
+from dotenv import load_dotenv
+
+# --- CARGA DE SEGURIDAD ---
+load_dotenv()
 
 # --- CONFIGURACIÓN DE LA PESTAÑA DEL NAVEGADOR ---
 st.set_page_config(
@@ -20,7 +24,7 @@ from reports.pdf_generator import generar_pdf_informe, generar_orden_entrega
 if "tema_app" not in st.session_state:
     st.session_state.tema_app = "Claro"
 
-# Estilos CSS dinámicos optimizados para corregir contraste en Modo Oscuro y Modo Claro
+# Estilos CSS dinámicos optimizados
 if st.session_state.tema_app == "Oscuro":
     css_estilos = """
     <style>
@@ -29,39 +33,21 @@ if st.session_state.tema_app == "Oscuro":
             font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif !important;
             color: #f8fafc !important;
         }
-        .stApp {
-            background-color: #0f172a !important;
-        }
-        header[data-testid="stHeader"] {
-            background-color: rgba(15, 23, 42, 0) !important;
-        }
-        section[data-testid="stSidebar"] {
-            background-color: #1e293b !important;
-            border-right: 1px solid #334155;
-        }
-        section[data-testid="stSidebar"] .stMarkdown, section[data-testid="stSidebar"] span, section[data-testid="stSidebar"] p {
-            color: #f8fafc !important;
-        }
+        .stApp { background-color: #0f172a !important; }
+        header[data-testid="stHeader"] { background-color: rgba(15, 23, 42, 0) !important; }
+        section[data-testid="stSidebar"] { background-color: #1e293b !important; border-right: 1px solid #334155; }
+        section[data-testid="stSidebar"] .stMarkdown, section[data-testid="stSidebar"] span, section[data-testid="stSidebar"] p { color: #f8fafc !important; }
         h1 { font-size: 1.5rem !important; color: #f8fafc !important; }
         h2 { font-size: 1.3rem !important; color: #f8fafc !important; }
         h3 { font-size: 1.1rem !important; color: #f8fafc !important; }
-        h4 { font-size: 0.95rem !important; color: #cbd5e1 !important; }
-        
         div[data-testid="stMetric"] {
             background-color: #1e293b !important;
             border: 1px solid #334155 !important;
             padding: 15px !important;
             border-radius: 12px !important;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3) !important;
         }
-        div[data-testid="stMetricValue"] {
-            font-size: 1.3rem !important;
-            color: #f8fafc !important;
-        }
-        div[data-testid="stMetricLabel"] {
-            font-size: 0.75rem !important;
-            color: #94a3b8 !important;
-        }
+        div[data-testid="stMetricValue"] { font-size: 1.3rem !important; color: #f8fafc !important; }
+        div[data-testid="stMetricLabel"] { font-size: 0.75rem !important; color: #94a3b8 !important; }
         .stButton button {
             background-color: #334155 !important;
             color: #f8fafc !important;
@@ -70,18 +56,9 @@ if st.session_state.tema_app == "Oscuro":
             font-weight: 600;
             font-size: 0.85rem !important;
         }
-        .stButton button:hover {
-            background-color: #475569 !important;
-            color: #ffffff !important;
-            border-color: #64748b !important;
-        }
-        .stTextInput input, .stNumberInput input, .stSelectbox div[data-baseweb="select"] {
-            color: #f8fafc !important;
-            background-color: #1e293b !important;
-        }
-        p, span, label {
-            color: #e2e8f0 !important;
-        }
+        .stButton button:hover { background-color: #475569 !important; color: #ffffff !important; }
+        .stTextInput input, .stNumberInput input, .stSelectbox div[data-baseweb="select"] { color: #f8fafc !important; background-color: #1e293b !important; }
+        p, span, label { color: #e2e8f0 !important; }
     </style>
     """
 else:
@@ -92,41 +69,21 @@ else:
             font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif !important;
             color: #1e293b !important;
         }
-        .stApp {
-            background-color: #f8fafc !important;
-        }
-        header[data-testid="stHeader"] {
-            background-color: rgba(248, 250, 252, 0) !important;
-        }
-        section[data-testid="stSidebar"] {
-            background-color: #ffffff !important;
-            border-right: 1px solid #e2e8f0;
-        }
+        .stApp { background-color: #f8fafc !important; }
+        header[data-testid="stHeader"] { background-color: rgba(248, 250, 252, 0) !important; }
+        section[data-testid="stSidebar"] { background-color: #ffffff !important; border-right: 1px solid #e2e8f0; }
         h1 { font-size: 1.5rem !important; color: #0f172a !important; }
         h2 { font-size: 1.3rem !important; color: #0f172a !important; }
         h3 { font-size: 1.1rem !important; color: #0f172a !important; }
-        h4 { font-size: 0.95rem !important; color: #334155 !important; }
-        
         div[data-testid="stMetric"] {
             background-color: #ffffff !important;
             border: 1px solid #e2e8f0 !important;
             padding: 15px !important;
             border-radius: 12px !important;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05) !important;
         }
-        div[data-testid="stMetricValue"] {
-            font-size: 1.3rem !important;
-            color: #0f172a !important;
-        }
-        div[data-testid="stMetricLabel"] {
-            font-size: 0.75rem !important;
-            color: #64748b !important;
-        }
-        .stButton button {
-            border-radius: 8px;
-            font-weight: 600;
-            font-size: 0.85rem !important;
-        }
+        div[data-testid="stMetricValue"] { font-size: 1.3rem !important; color: #0f172a !important; }
+        div[data-testid="stMetricLabel"] { font-size: 0.75rem !important; color: #64748b !important; }
+        .stButton button { border-radius: 8px; font-weight: 600; font-size: 0.85rem !important; }
     </style>
     """
 
@@ -135,8 +92,8 @@ st.markdown(css_estilos, unsafe_allow_html=True)
 LOGO_PATH = "assets/logo_esterilcontrol.jpg"
 DB_CICLOS_FILE = "ciclos_db.json"
 DB_IB_FILE = "ib_db.json"
+CONFIG_MAESTRA_FILE = "sistema_config.json"
 
-# --- GENERADORES DE HORA Y MINUTOS EXACTOS (12 HORAS AM/PM) ---
 LISTA_HORAS_BASE = [f"{h:02d}" for h in range(1, 13)]
 LISTA_MINUTOS = [f"{m:02d}" for m in range(60)]
 LISTA_AM_PM = ["a.m.", "p.m."]
@@ -150,19 +107,56 @@ def obtener_hora_minuto_actual():
     h_12 = 12 if h_12 == 0 else h_12
     return f"{h_12:02d}", f"{minuto:02d}", ampm
 
-# --- GESTIÓN DE USUARIOS EN SESSION STATE ---
+# --- CONFIGURACIÓN DE USUARIOS Y PERMISOS MAESTROS ---
 if "usuarios_db" not in st.session_state:
     st.session_state.usuarios_db = {
-        "admin": {"nombre": "Administrador", "pass": "admin123", "rol": "admin"},
-        "supervisor": {"nombre": "Davinson Peña (Supervisor)", "pass": "super123", "rol": "supervisor"},
-        "visitante": {"nombre": "Visitante / Auditor", "pass": "visit123", "rol": "visitante"}
+        "admin": {"nombre": "Administrador", "pass": os.getenv("ADMIN_PASS", "admin123"), "rol": "admin", "activo": True},
+        "supervisor": {"nombre": "Davinson Peña (Supervisor)", "pass": os.getenv("SUPER_PASS", "super123"), "rol": "supervisor", "activo": True},
+        "visitante": {"nombre": "Visitante / Auditor", "pass": os.getenv("VISIT_PASS", "visit123"), "rol": "visitante", "activo": True}
     }
 
-OWNER_USER = "Davinson"
+OWNER_USER = os.getenv("OWNER_USER", "Davinson")
 if "owner_pass" not in st.session_state:
-    st.session_state.owner_pass = "Davinson151"
+    st.session_state.owner_pass = os.getenv("OWNER_PASS", "Davinson151")
 
-# --- FUNCIONES DE PERSISTENCIA ---
+# Permisos globales de módulos por rol
+if "permisos_roles" not in st.session_state:
+    st.session_state.permisos_roles = {
+        "admin": {"Ciclos / Cargas": True, "Control de Incubación": True, "Liberación": True, "Informes": True},
+        "supervisor": {"Ciclos / Cargas": True, "Control de Incubación": True, "Liberación": True, "Informes": True},
+        "visitante": {"Ciclos / Cargas": True, "Control de Incubación": True, "Liberación": True, "Informes": True}
+    }
+
+if "app_bloqueada_general" not in st.session_state:
+    st.session_state.app_bloqueada_general = False
+
+# Cargar configuraciones de sistema adicionales si existen
+if os.path.exists(CONFIG_MAESTRA_FILE):
+    try:
+        with open(CONFIG_MAESTRA_FILE, "r", encoding="utf-8") as f:
+            cfg_cargada = json.load(f)
+            if "app_bloqueada_general" in cfg_cargada:
+                st.session_state.app_bloqueada_general = cfg_cargada["app_bloqueada_general"]
+            if "permisos_roles" in cfg_cargada:
+                st.session_state.permisos_roles = cfg_cargada["permisos_roles"]
+            if "usuarios_db" in cfg_cargada:
+                for u_k, u_v in cfg_cargada["usuarios_db"].items():
+                    if u_k in st.session_state.usuarios_db:
+                        st.session_state.usuarios_db[u_k]["pass"] = u_v.get("pass", st.session_state.usuarios_db[u_k]["pass"])
+                        st.session_state.usuarios_db[u_k]["activo"] = u_v.get("activo", True)
+    except:
+        pass
+
+def guardar_config_maestra():
+    data_cfg = {
+        "app_bloqueada_general": st.session_state.app_bloqueada_general,
+        "permisos_roles": st.session_state.permisos_roles,
+        "usuarios_db": st.session_state.usuarios_db
+    }
+    with open(CONFIG_MAESTRA_FILE, "w", encoding="utf-8") as f:
+        json.dump(data_cfg, f, ensure_ascii=False, indent=4)
+
+# --- FUNCIONES DE PERSISTENCIA DE DATOS ---
 def cargar_datos_disco():
     ciclos = []
     ibs = []
@@ -209,6 +203,36 @@ def mostrar_logo(width=180):
 
 
 # ==========================================
+# INTERRUPTOR DE EMERGENCIA GENERAL (KILL SWITCH)
+# ==========================================
+if st.session_state.app_bloqueada_general and st.session_state.rol_actual != "dueno":
+    col_izq, col_centro, col_der = st.columns([1, 1.5, 1])
+    with col_centro:
+        st.write("")
+        st.write("")
+        mostrar_logo(width=220)
+        st.markdown("<h2 style='text-align: center; color: #dc3545;'>⚠️ APLICACIÓN DETENIDA</h2>", unsafe_allow_html=True)
+        st.warning("El sistema se encuentra temporalmente pausado por mantenimiento o directriz del Dueño. No hay acceso disponible en este momento.")
+        
+        st.markdown("---")
+        st.markdown("#### ¿Eres el Dueño? Inicia sesión para restaurar el sistema:")
+        u_m = st.text_input("Usuario Maestro", key="master_unlock_user")
+        p_m = st.text_input("Contraseña Maestra", type="password", key="master_unlock_pass")
+        if st.button("🔓 Desbloquear Aplicación", type="primary", use_container_width=True):
+            if u_m.strip() == OWNER_USER and p_m == st.session_state.owner_pass:
+                st.session_state.app_bloqueada_general = False
+                guardar_config_maestra()
+                st.session_state.autenticado = True
+                st.session_state.usuario_actual = "Davinson (Dueño del Sistema)"
+                st.session_state.rol_actual = "dueno"
+                st.success("¡Sistema desbloqueado con éxito!")
+                st.rerun()
+            else:
+                st.error("Credenciales maestras incorrectas.")
+    st.stop()
+
+
+# ==========================================
 # 1. PANTALLA DE LOGIN
 # ==========================================
 if not st.session_state.autenticado:
@@ -236,11 +260,17 @@ if not st.session_state.autenticado:
                 st.session_state.usuario_actual = "Davinson (Dueño del Sistema)"
                 st.session_state.rol_actual = "dueno"
                 st.rerun()
-            elif user_clean_lower in st.session_state.usuarios_db and st.session_state.usuarios_db[user_clean_lower]["pass"] == pass_input:
-                st.session_state.autenticado = True
-                st.session_state.usuario_actual = st.session_state.usuarios_db[user_clean_lower]["nombre"]
-                st.session_state.rol_actual = st.session_state.usuarios_db[user_clean_lower]["rol"]
-                st.rerun()
+            elif user_clean_lower in st.session_state.usuarios_db:
+                u_data = st.session_state.usuarios_db[user_clean_lower]
+                if not u_data.get("activo", True):
+                    st.error("Este usuario ha sido inhabilitado temporalmente por el Dueño.")
+                elif u_data["pass"] == pass_input:
+                    st.session_state.autenticado = True
+                    st.session_state.usuario_actual = u_data["nombre"]
+                    st.session_state.rol_actual = u_data["rol"]
+                    st.rerun()
+                else:
+                    st.error("Credenciales de acceso incorrectas.")
             else:
                 st.error("Credenciales de acceso incorrectas.")
 
@@ -270,11 +300,21 @@ else:
 
         st.markdown("---")
         
-        lista_nav = ["Panel de control", "Ciclos / Cargas", "Control de Incubación", "Liberación", "Informes"]
-        if st.session_state.rol_actual in ["admin", "dueno"]:
-            lista_nav.append("Configuración Admin")
+        lista_nav_base = ["Panel de control", "Ciclos / Cargas", "Control de Incubación", "Liberación", "Informes"]
+        
         if st.session_state.rol_actual == "dueno":
-            lista_nav.append("🔑 Configuración Maestro (Dueño)")
+            lista_nav = lista_nav_base + ["Configuración Admin", "🔑 Configuración Maestro (Dueño)"]
+        else:
+            rol_key = st.session_state.rol_actual
+            permisos_rol = st.session_state.permisos_roles.get(rol_key, {})
+            
+            lista_nav = ["Panel de control"]
+            for mod in ["Ciclos / Cargas", "Control de Incubación", "Liberación", "Informes"]:
+                if permisos_rol.get(mod, True):
+                    lista_nav.append(mod)
+            
+            if st.session_state.rol_actual == "admin":
+                lista_nav.append("Configuración Admin")
 
         opcion = st.radio("Navegación", lista_nav)
 
@@ -315,14 +355,9 @@ else:
                 estado_lib = row.get('carga_liberada', 'No')
                 res_ib_val = row.get('res_ib', 'Negativo')
                 
-                if st.session_state.tema_app == "Oscuro":
-                    color_fondo = "#1e293b"
-                    borde_tarjeta = "#334155"
-                    texto_color = "#f8fafc"
-                else:
-                    color_fondo = "#f8f9fa"
-                    borde_tarjeta = "#ddd"
-                    texto_color = "#1e293b"
+                color_fondo = "#1e293b" if st.session_state.tema_app == "Oscuro" else "#f8f9fa"
+                borde_tarjeta = "#334155" if st.session_state.tema_app == "Oscuro" else "#ddd"
+                texto_color = "#f8fafc" if st.session_state.tema_app == "Oscuro" else "#1e293b"
 
                 badge_estado = "🟡 En Proceso / Cuarentena"
                 if "Rechazado" in estado_lib or res_ib_val == "Positivo":
@@ -740,7 +775,10 @@ else:
     elif opcion == "Liberación":
         st.subheader("Liberación de Carga (Validación Estricta por Control Biológico)")
         if st.session_state.ciclos_db:
-            for idx_l, c in enumerate(st.session_state.ciclos_db):
+            # Reemplaza el bucle simple por esta línea con orden inverso:
+            ciclos_ordenados_lib = sorted(st.session_state.ciclos_db, key=lambda x: (str(x.get('fecha', '')), int(x.get('n_ciclo', 0))), reverse=True)
+            
+            for idx_l, c in enumerate(ciclos_ordenados_lib):
                 c_num_int = int(c['n_ciclo'])
                 cod_c_fmt = f"{c_num_int:05d}"
                 
@@ -823,7 +861,7 @@ else:
         else:
             st.info("No hay ciclos registrados.")
 
-# --- INFORMES ---
+    # --- INFORMES ---
     elif opcion == "Informes":
         st.subheader("Módulo de Informes Oficiales (CIR-FT-01)")
         
@@ -866,7 +904,6 @@ else:
                     item for item in datos_para_pdf["items"] if item["cantidad"] > 0
                 ]
                 
-                # Generación del informe oficial en Word
                 docx_buffer = generar_pdf_informe(datos_para_pdf)
                 
                 st.download_button(
@@ -889,53 +926,16 @@ else:
                         except:
                             return 0
 
-                   # Diccionario ordenado estrictamente con las llaves correctas de tu base de datos/sesión
                     items_cargados = [
-                        {
-                            "nombre": "Paquete Laparotomía", 
-                            "lote": str(c_sel.get('l_lap', '')), 
-                            "cantidad": parse_q(c_sel.get('q_lap')), 
-                            "obs": "Conforme"
-                        },
-                        {
-                            "nombre": "Unidad Hemodinamia", 
-                            "lote": str(c_sel.get('l_hemo', '')), 
-                            "cantidad": parse_q(c_sel.get('q_hemo')), 
-                            "obs": "Conforme"
-                        },
-                        {
-                            "nombre": "Cirugía Valledupar", 
-                            "lote": str(c_sel.get('l_cir', '')), 
-                            "cantidad": parse_q(c_sel.get('q_cir')), 
-                            "obs": "Conforme"
-                        },
-                        {
-                            "nombre": "Sábanas Estériles", 
-                            "lote": str(c_sel.get('l_sab', '')), 
-                            "cantidad": parse_q(c_sel.get('q_sab')), 
-                            "obs": "Conforme"
-                        },
-                        {
-                            "nombre": "Paquete Central Adulto", 
-                            "lote": str(c_sel.get('l_adult', '')), 
-                            "cantidad": parse_q(c_sel.get('q_adult')), 
-                            "obs": "Conforme"
-                        },
-                        {
-                            "nombre": "Neurointervencionismo", 
-                            "lote": str(c_sel.get('l_neuro', '')), 
-                            "cantidad": parse_q(c_sel.get('q_neuro')), 
-                            "obs": "Conforme"
-                        },
-                        {
-                            "nombre": "Apósitos Estériles", 
-                            "lote": str(c_sel.get('l_apos', '')), 
-                            "cantidad": parse_q(c_sel.get('q_apos')), 
-                            "obs": "Conforme"
-                        },
+                        {"nombre": "Paquete Laparotomía", "lote": str(c_sel.get('l_lap', '')), "cantidad": parse_q(c_sel.get('q_lap')), "obs": "Conforme"},
+                        {"nombre": "Unidad Hemodinamia", "lote": str(c_sel.get('l_hemo', '')), "cantidad": parse_q(c_sel.get('q_hemo')), "obs": "Conforme"},
+                        {"nombre": "Cirugía Valledupar", "lote": str(c_sel.get('l_cir', '')), "cantidad": parse_q(c_sel.get('q_cir')), "obs": "Conforme"},
+                        {"nombre": "Sábanas Estériles", "lote": str(c_sel.get('l_sab', '')), "cantidad": parse_q(c_sel.get('q_sab')), "obs": "Conforme"},
+                        {"nombre": "Paquete Central Adulto", "lote": str(c_sel.get('l_adult', '')), "cantidad": parse_q(c_sel.get('q_adult')), "obs": "Conforme"},
+                        {"nombre": "Neurointervencionismo", "lote": str(c_sel.get('l_neuro', '')), "cantidad": parse_q(c_sel.get('q_neuro')), "obs": "Conforme"},
+                        {"nombre": "Apósitos Estériles", "lote": str(c_sel.get('l_apos', '')), "cantidad": parse_q(c_sel.get('q_apos')), "obs": "Conforme"},
                     ]
 
-                    # Filtrar únicamente los ítems que tengan cantidad mayor a 0
                     items_filtrados = [item for item in items_cargados if item["cantidad"] > 0]
 
                     datos_orden = {
@@ -957,27 +957,283 @@ else:
                         mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                     )
                 else:
-                    st.warning("⚠️ La orden de entrega se encuentra bloqueada y solo estará disponible una vez que el ciclo haya sido aprobado y liberado por un Supervisor o Administrador.")
+                    st.warning("⚠️ La orden de entrega se encuentra bloqueada y solo estará disponible una vez que el ciclo haya sido aprobado y liberado.")
         else:   
             st.info("Registra al menos un ciclo para poder visualizar y descargar los formatos oficiales.")
 
     # --- CONFIGURACIÓN ADMIN ---
-    elif opcion == "Configuración Admin" and st.session_state.rol_actual in ["admin", "dueno"]:
+    elif opcion == "Configuración Admin" and (st.session_state.rol_actual in ["admin", "dueno"]):
         st.subheader("⚙️ Panel de Configuración Administrativa")
         with st.form("form_cambio_pass_admin"):
-            user_a_cambiar = st.selectbox("Seleccionar Usuario", list(st.session_state.usuarios_db.keys()))
+            user_a_cambiar = st.selectbox("Seleccionar Usuario", [u for u in st.session_state.usuarios_db.keys()])
             nueva_pass_val = st.text_input("Nueva Contraseña", type="password")
             if st.form_submit_button("Actualizar Contraseña"):
                 if nueva_pass_val.strip():
                     st.session_state.usuarios_db[user_a_cambiar]["pass"] = nueva_pass_val.strip()
+                    guardar_config_maestra()
                     st.success("¡Contraseña actualizada con éxito!")
 
     # --- CONFIGURACIÓN MAESTRO (DUEÑO) ---
     elif opcion == "🔑 Configuración Maestro (Dueño)" and st.session_state.rol_actual == "dueno":
-        st.subheader("🔐 Panel Maestro (Modo Dueño Oculto)")
-        if st.button("🗑️ Borrar Todo el Historial de Ciclos e Indicadores", type="primary"):
-            st.session_state.ciclos_db = []
-            st.session_state.ib_db = []
-            guardar_datos_disco()
-            st.warning("Se ha vaciado todo el registro de ciclos e indicadores biológicos.")
-            st.rerun()
+        st.subheader("🔐 Panel de Control Maestro (Dueño del Sistema)")
+        st.info("Bienvenido al núcleo de control absoluto. Todas las operaciones críticas y de gestión de permisos requieren confirmación con tu contraseña de Dueño.")
+        
+        tab_m1, tab_m2, tab_m3, tab_m4, tab_m5 = st.tabs([
+            "🗑️ Borrar Historial", 
+            "🛑 Interruptor de Emergencia", 
+            "🔑 Gestión de Credenciales y Usuarios", 
+            "🛡️ Control de Módulos por Rol",
+            "📂 Importación Excel"
+        ])
+
+        # TAB 1: Borrar Historial con confirmación de contraseña
+        with tab_m1:
+            st.markdown("### Zona de Peligro: Borrar Base de Datos")
+            st.warning("Borrar el historial eliminará permanentemente todos los ciclos y registros de indicadores biológicos guardados.")
+            
+            pass_conf_1 = st.text_input("Digita tu contraseña de Dueño para confirmar:", type="password", key="pass_borrar_historial")
+            if st.button("🗑️ Borrar Todo el Historial de Ciclos e Indicadores", type="primary"):
+                if pass_conf_1 == st.session_state.owner_pass:
+                    st.session_state.ciclos_db = []
+                    st.session_state.ib_db = []
+                    guardar_datos_disco()
+                    st.success("¡Se ha vaciado todo el registro de ciclos e indicadores biológicos exitosamente!")
+                    st.rerun()
+                else:
+                    st.error("Contraseña de Dueño incorrecta. Operación cancelada por seguridad.")
+
+        # TAB 2: Interruptor de Emergencia (Kill Switch)
+        with tab_m2:
+            st.markdown("### Bloqueo Global de la Aplicación")
+            st.write(f"Estado actual de bloqueo general: **{'BLOQUEADA 🛑' if st.session_state.app_bloqueada_general else 'ACTIVA 🟢'}**")
+            
+            pass_conf_2 = st.text_input("Digita tu contraseña de Dueño para alternar el estado:", type="password", key="pass_kill_switch")
+            
+            col_ks1, col_ks2 = st.columns(2)
+            with col_ks1:
+                if st.button("🛑 Activar Bloqueo Global (Pausar App)", type="primary"):
+                    if pass_conf_2 == st.session_state.owner_pass:
+                        st.session_state.app_bloqueada_general = True
+                        guardar_config_maestra()
+                        st.warning("¡Aplicación bloqueada para todos los demás usuarios!")
+                        st.rerun()
+                    else:
+                        st.error("Contraseña de Dueño incorrecta.")
+            with col_ks2:
+                if st.button("🟢 Desactivar Bloqueo (Restaurar Acceso)", type="secondary"):
+                    if pass_conf_2 == st.session_state.owner_pass:
+                        st.session_state.app_bloqueada_general = False
+                        guardar_config_maestra()
+                        st.success("¡Aplicación restaurada para todos los usuarios!")
+                        st.rerun()
+                    else:
+                        st.error("Contraseña de Dueño incorrecta.")
+
+        # TAB 3: Gestión y Restauración de Credenciales y Usuarios
+        with tab_m3:
+            st.markdown("### Restauración de Credenciales y Estado de Usuarios")
+            u_sel_master = st.selectbox("Seleccionar rol o usuario a gestionar:", list(st.session_state.usuarios_db.keys()), key="select_user_master_gest")
+            
+            dat_u = st.session_state.usuarios_db[u_sel_master]
+            st.write(f"**Nombre asociado:** {dat_u['nombre']}")
+            st.write(f"**Estado actual:** {'Activo ✅' if dat_u.get('activo', True) else 'Inhabilitado ❌'}")
+            
+            nueva_p_master = st.text_input("Nueva contraseña para este usuario:", type="password", key="new_pass_master_user")
+            nuevo_estado_activo = st.checkbox("Usuario Activo (Permitir ingreso)", value=dat_u.get('activo', True), key="chk_activo_master_user")
+            
+            pass_conf_3 = st.text_input("Digita tu contraseña de Dueño para aplicar los cambios:", type="password", key="pass_gest_cred")
+            
+            if st.button("💾 Guardar Cambios de Usuario", type="primary"):
+                if pass_conf_3 == st.session_state.owner_pass:
+                    st.session_state.usuarios_db[u_sel_master]["pass"] = nueva_p_master.strip() if nueva_p_master.strip() else dat_u["pass"]
+                    st.session_state.usuarios_db[u_sel_master]["activo"] = nuevo_estado_activo
+                    guardar_config_maestra()
+                    st.success(f"¡Credenciales y estado del usuario `{u_sel_master}` actualizados correctamente!")
+                    st.rerun()
+                else:
+                    st.error("Contraseña de Dueño incorrecta.")
+
+        # TAB 4: Control de Permisos Individuales por Rol
+        with tab_m4:
+            st.markdown("### Bloqueo o Habilitación de Módulos por Rol")
+            st.write("Selecciona qué módulos puede visualizar cada rol dentro del sistema.")
+            
+            rol_a_configurar = st.selectbox("Seleccionar Rol:", ["admin", "supervisor", "visitante"], key="rol_permiso_select")
+            
+            permisos_actuales = st.session_state.permisos_roles.get(rol_a_configurar, {})
+            
+            p_ciclos = st.checkbox("Módulo: Ciclos / Cargas", value=permisos_actuales.get("Ciclos / Cargas", True), key="perm_ciclos")
+            p_inc = st.checkbox("Módulo: Control de Incubación", value=permisos_actuales.get("Control de Incubación", True), key="perm_inc")
+            p_lib = st.checkbox("Módulo: Liberación", value=permisos_actuales.get("Liberación", True), key="perm_lib")
+            p_inf = st.checkbox("Módulo: Informes", value=permisos_actuales.get("Informes", True), key="perm_inf")
+            
+            pass_conf_4 = st.text_input("Digita tu contraseña de Dueño para guardar permisos:", type="password", key="pass_permisos_rol")
+            
+            if st.button("💾 Aplicar Restricciones de Módulos", type="primary"):
+                if pass_conf_4 == st.session_state.owner_pass:
+                    st.session_state.permisos_roles[rol_a_configurar] = {
+                        "Ciclos / Cargas": p_ciclos,
+                        "Control de Incubación": p_inc,
+                        "Liberación": p_lib,
+                        "Informes": p_inf
+                    }
+                    guardar_config_maestra()
+                    st.success(f"¡Permisos para el rol `{rol_a_configurar}` actualizados con éxito!")
+                    st.rerun()
+                else:
+                    st.error("Contraseña de Dueño incorrecta.")
+
+        # TAB 5: Importación Masiva de Excel (Mejorada y Robusta)
+        with tab_m5:
+            st.markdown("### 📂 Importación Masiva y Sincronización de Base de Datos (Excel)")
+            st.info("Sube tu archivo Excel de control. El sistema detectará automáticamente las columnas y pestañas disponibles, permitiéndote fusionar o reemplazar los registros de manera segura.")
+
+            excel_file_subido = st.file_uploader("Selecciona el archivo Excel (.xlsx)", type=["xlsx"], key="excel_migracion_robusta")
+            
+            if excel_file_subido is not None:
+                try:
+                    xls_obj = pd.ExcelFile(excel_file_subido)
+                    hojas_disponibles = xls_obj.sheet_names
+                    
+                    st.success(f"Archivo cargado con éxito. Pestañas detectadas: `{', '.join(hojas_disponibles)}`")
+                    
+                    col_h1, col_h2 = st.columns(2)
+                    with col_h1:
+                        hoja_ciclos_sel = st.selectbox("Pestaña de Ciclos:", hojas_disponibles, index=0)
+                    with col_h2:
+                        modo_importacion = st.radio("Modo de Importación:", ["Sobrescribir toda la base de datos", "Añadir / Fusionar con registros actuales"], index=0)
+
+                    df_prev = pd.read_excel(xls_obj, sheet_name=hoja_ciclos_sel)
+                    st.markdown(f"**Vista previa de columnas encontradas ({len(df_prev)} filas):**")
+                    st.dataframe(df_prev.head(3), use_container_width=True)
+                    
+                    cols_disponibles = [str(c).strip() for c in df_prev.columns]
+                    
+                    st.markdown("---")
+                    st.markdown("#### 🗺️ Mapeo Inteligente de Columnas")
+                    st.write("Verifica o selecciona a qué campo del sistema corresponde cada columna de tu Excel:")
+                    
+                    def buscar_columna_sugerida(lista_opciones, posibles_nombres):
+                        for p in posibles_nombres:
+                            for col in lista_opciones:
+                                if p.lower() in col.lower():
+                                    return col
+                        return lista_opciones[0] if lista_opciones else None
+
+                    map_c1, map_c2, map_c3 = st.columns(3)
+                    with map_c1:
+                        col_map_n = st.selectbox("Columna N° Ciclo", cols_disponibles, index=cols_disponibles.index(buscar_columna_sugerida(cols_disponibles, ["ciclo", "n° ciclo", "numero", "id"])) if cols_disponibles else 0)
+                        col_map_f = st.selectbox("Columna Fecha", cols_disponibles, index=cols_disponibles.index(buscar_columna_sugerida(cols_disponibles, ["fecha", "date"])) if cols_disponibles else 0)
+                    with map_c2:
+                        col_map_eq = st.selectbox("Columna Equipo", cols_disponibles, index=cols_disponibles.index(buscar_columna_sugerida(cols_disponibles, ["equipo", "esterilizador"])) if cols_disponibles else 0)
+                        col_map_op = st.selectbox("Columna Operador", cols_disponibles, index=cols_disponibles.index(buscar_columna_sugerida(cols_disponibles, ["operador", "responsable"])) if cols_disponibles else 0)
+                    with map_c3:
+                        col_map_uni = st.selectbox("Columna Unidades Totales", cols_disponibles, index=cols_disponibles.index(buscar_columna_sugerida(cols_disponibles, ["unidades", "paquetes", "cantidad", "tot"])) if cols_disponibles else 0)
+                        col_map_obs = st.selectbox("Columna Observaciones", cols_disponibles, index=cols_disponibles.index(buscar_columna_sugerida(cols_disponibles, ["observacion", "tipo", "carga"])) if cols_disponibles else 0)
+
+                except Exception as ex:
+                    st.error(f"Error al leer la estructura del archivo Excel: {ex}")
+                    df_prev = None
+
+            pass_import = st.text_input("Digita tu contraseña de Dueño para confirmar la importación:", type="password", key="pass_imp_dueno")
+
+            if st.button("🚀 Ejecutar Migración / Importación de Base de Datos", type="primary", key="btn_migrar"):
+                if pass_import == st.session_state.owner_pass:
+                    if excel_file_subido is not None and 'df_prev' in locals() and df_prev is not None:
+                        try:
+                            nuevos_ciclos = []
+                            nuevos_ibs = []
+                            
+                            # Si es fusión, conservamos los registros existentes
+                            if modo_importacion == "Añadir / Fusionar con registros actuales":
+                                nuevos_ciclos = list(st.session_state.ciclos_db)
+                                nuevos_ibs = list(st.session_state.ib_db)
+                                max_n_existente = max([int(x.get('n_ciclo', 0)) for x in nuevos_ciclos], default=0)
+                            else:
+                                max_n_existente = 0
+
+                            for idx_r, row in df_prev.iterrows():
+                                try:
+                                    n_cic_val = int(row[col_map_n]) if col_map_n in row and pd.notna(row[col_map_n]) else (max_n_existente + idx_r + 1)
+                                except:
+                                    n_cic_val = max_n_existente + idx_r + 1
+
+                                fecha_val = str(row[col_map_f])[:10] if col_map_f in row and pd.notna(row[col_map_f]) else str(datetime.now().date())
+                                equipo_val = str(row[col_map_eq]) if col_map_eq in row and pd.notna(row[col_map_eq]) else "HDX-6 EO"
+                                operador_val = str(row[col_map_op]) if col_map_op in row and pd.notna(row[col_map_op]) else st.session_state.usuario_actual
+                                
+                                try:
+                                    tot_u_val = int(float(row[col_map_uni])) if col_map_uni in row and pd.notna(row[col_map_uni]) else 0
+                                except:
+                                    tot_u_val = 0
+
+                                obs_val = str(row[col_map_obs]) if col_map_obs in row and pd.notna(row[col_map_obs]) else "Textil / Importado"
+
+                                registro_importado = {
+                                    "n_ciclo": n_cic_val,
+                                    "fecha": fecha_val,
+                                    "hora_inicio": "08:00 a.m.",
+                                    "hora_fin": "04:00 p.m.",
+                                    "equipo": equipo_val,
+                                    "operador": operador_val,
+                                    "temp": 30.9,
+                                    "humedad": 52.5,
+                                    "conc_eto": "99.0%",
+                                    "presion_camara": "-49kPa",
+                                    "t_exp": 120,
+                                    "aireacion": "2N2A",
+                                    "resultado": "Aprobado",
+                                    "q_lap": tot_u_val if "lap" in obs_val.lower() else 0, "p_lap": 0.0, "l_lap": "LT080327",
+                                    "q_hemo": 0, "p_hemo": 0.0, "l_hemo": "0",
+                                    "q_cir": 0, "p_cir": 0.0, "l_cir": "0",
+                                    "q_sab": 0, "p_sab": 0.0, "l_sab": "0",
+                                    "q_adult": 0, "p_adult": 0.0, "l_adult": "0",
+                                    "q_neuro": 0, "p_neuro": 0.0, "l_neuro": "0",
+                                    "q_apos": 0, "p_apos": 0.0, "l_apos": "0",
+                                    "tot_unidades": tot_u_val,
+                                    "tot_peso": round(tot_u_val * 1.05, 2),
+                                    "canastas_grandes": min(tot_u_val, 10),
+                                    "canastas_pequenas": 2,
+                                    "ocupacion": 75.0,
+                                    "estado_cumplimiento": "CUMPLE",
+                                    "fecha_liberacion": "Completada",
+                                    "carga_liberada": "Sí",
+                                    "res_ib": "Negativo",
+                                    "observaciones": obs_val
+                                }
+                                
+                                # Evitar duplicados exactos de n_ciclo si es fusión
+                                if modo_importacion == "Añadir / Fusionar con registros actuales":
+                                    nuevos_ciclos = [c for c in nuevos_ciclos if int(c['n_ciclo']) != int(n_cic_val)]
+                                
+                                nuevos_ciclos.append(registro_importado)
+
+                                # Crear o actualizar indicador biológico asociado
+                                ib_existente_idx = next((i for i, ib in enumerate(nuevos_ibs) if int(ib.get('ciclo', 0)) == int(n_cic_val)), -1)
+                                ib_nuevo_item = {
+                                    "ciclo": int(n_cic_val),
+                                    "tipo": "BT10 EO ATCC 9372",
+                                    "lote": "A50300",
+                                    "resultado": "Negativo",
+                                    "fecha_incubacion": fecha_val,
+                                    "responsable": operador_val,
+                                    "observaciones": "Importado desde Excel"
+                                }
+                                if ib_existente_idx != -1:
+                                    nuevos_ibs[ib_existente_idx] = ib_nuevo_item
+                                else:
+                                    nuevos_ibs.append(ib_nuevo_item)
+
+                            st.session_state.ciclos_db = nuevos_ciclos
+                            st.session_state.ib_db = nuevos_ibs
+                            guardar_datos_disco()
+
+                            st.success(f"¡Importación completada con éxito! Se procesaron {len(df_prev)} registros correctamente.")
+                            st.balloons()
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"Error durante el procesamiento y guardado de los datos: {e}")
+                    else:
+                        st.warning("Por favor, sube un archivo Excel válido antes de ejecutar la importación.")
+                else:
+                    st.error("Contraseña de Dueño incorrecta.")

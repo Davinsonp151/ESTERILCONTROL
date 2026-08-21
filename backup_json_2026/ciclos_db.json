@@ -2671,7 +2671,7 @@
         "n_ciclo": 157,
         "fecha": "2026-08-20",
         "hora_inicio": "02:28 p.m.",
-        "hora_fin": "07:35 p.m.",
+        "hora_fin": "",
         "equipo": "HDX-6 EO",
         "operador": "Davinson P",
         "temp": 36.0,
@@ -2708,7 +2708,7 @@
         "canastas_pequenas": 2,
         "ocupacion": 50.0,
         "estado_cumplimiento": "CUMPLE",
-        "fecha_liberacion": "2026-08-22 20:35",
+        "fecha_liberacion": "Pendiente (En curso)",
         "carga_liberada": "No",
         "res_ib": "Negativo",
         "observaciones": "Mixto"
